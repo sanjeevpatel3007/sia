@@ -1,6 +1,7 @@
 'use client';
 
 import { Calendar, Send } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ChatInputProps {
   input: string;
@@ -9,6 +10,7 @@ interface ChatInputProps {
   isStreaming: boolean;
   hasCalendarPermission: boolean;
   onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  onRequestCalendarPermission?: () => void;
 }
 
 export default function ChatInput({
@@ -17,23 +19,35 @@ export default function ChatInput({
   onSendMessage,
   isStreaming,
   hasCalendarPermission,
-  onKeyDown
+  onKeyDown,
+  onRequestCalendarPermission
 }: ChatInputProps) {
   return (
     <div className="bg-white border-t border-gray-100 shadow-lg px-0 md:px-10">
       <div className="px-4 py-3 sm:py-4">
         <div className="flex gap-2 sm:gap-3">
           {/* Calendar status indicator */}
-          <button 
-            className="p-2 rounded-lg sama-bg-accent hover:sama-bg-accent-light transition-colors shrink-0" 
-            title={hasCalendarPermission ? "Calendar Connected" : "Calendar Not Connected"}
-          >
-            {hasCalendarPermission ? (
-              <Calendar className="w-5 h-5 sama-text-primary" />
-            ) : (
-              <Calendar className="w-5 h-5 text-gray-400" />
-            )}
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button 
+                className="p-2 rounded-lg sama-bg-accent hover:sama-bg-accent-light transition-colors shrink-0" 
+                onClick={hasCalendarPermission ? undefined : onRequestCalendarPermission}
+                disabled={isStreaming}
+              >
+                {hasCalendarPermission ? (
+                  <Calendar className="w-5 h-5 sama-text-primary" />
+                ) : (
+                  <Calendar className="w-5 h-5 text-gray-400" />
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {hasCalendarPermission 
+                ? "Calendar Connected - Ask about your schedule!" 
+                : "Click to connect your Google Calendar"
+              }
+            </TooltipContent>
+          </Tooltip>
           
           {/* Input field */}
           <input

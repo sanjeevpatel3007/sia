@@ -42,7 +42,7 @@ interface ChatContextType {
   updateSession: (sessionId: string, title: string) => Promise<void>;
   deleteSession: (sessionId: string) => Promise<void>;
   refreshSessions: () => Promise<void>;
-  addMessageToCurrentSession: (role: 'user' | 'assistant', content: string) => Promise<void>;
+  addMessageToCurrentSession: (role: 'user' | 'assistant', content: string, sessionId?: string) => Promise<void>;
   setCurrentSessionId: (sessionId: string | null) => void;
   setCurrentMessages: (messages: ChatMessage[]) => void;
 }
@@ -162,8 +162,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const addMessageToCurrentSession = async (role: 'user' | 'assistant', content: string) => {
-    if (!currentSessionId || !session?.user?.id) return;
+  const addMessageToCurrentSession = async (role: 'user' | 'assistant', content: string, sessionId?: string) => {
+    const targetSessionId = sessionId || currentSessionId;
+    if (!targetSessionId || !session?.user?.id) return;
     
     try {
       // Check if this is the first message in a new session
@@ -174,7 +175,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         const { data, error } = await supabase
           .from('chat_sessions')
           .insert([{
-            id: currentSessionId,
+            id: targetSessionId,
             user_id: session.user.id,
             title: content.length > 50 ? content.substring(0, 50) + '...' : content,
             created_at: new Date().toISOString(),
@@ -187,7 +188,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         
         // Add session to local state
         const newSession: ChatSession = {
-          id: currentSessionId,
+          id: targetSessionId,
           user_id: session.user.id,
           title: data.title,
           created_at: data.created_at,
@@ -200,9 +201,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       }
       
       // Add message to database
-      const message = await addMessage(currentSessionId, session.user.id, role, content);
+      const message = await addMessage(targetSessionId, session.user.id, role, content);
       setCurrentMessages(prev => [...prev, message]);
-      await refreshSessions(); // Refresh to update message count and last message
+      
+      // Only refresh sessions after assistant response to avoid interrupting the flow
+      if (role === 'assistant') {
+        await refreshSessions(); // Refresh to update message count and last message
+      }
     } catch (error) {
       console.error('Error adding message:', error);
       throw error;

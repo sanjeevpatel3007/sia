@@ -12,7 +12,7 @@ interface ChatInterfaceProps {
 }
 
 export default function ChatInterface({ chatId }: ChatInterfaceProps) {
-  const { hasCalendarPermission, session } = useAuth();
+  const { hasCalendarPermission, session, requestCalendarPermission } = useAuth();
   const { 
     currentSessionId, 
     currentMessages, 
@@ -67,15 +67,19 @@ const welcomeMessage = hasCalendarPermission
     const userInput = input;
     setInput("");
     
+    let sessionIdToUse: string;
+    
     // If no current session, create one first
     if (!currentSessionId) {
-      const newSessionId = await createNewSession();
-      // Update URL to include the new session ID
-      window.history.pushState(null, '', `/chat/${newSessionId}`);
+      sessionIdToUse = await createNewSession();
+      // Update URL to include the new session ID (but don't refresh the page)
+      window.history.pushState(null, '', `/chat/${sessionIdToUse}`);
+    } else {
+      sessionIdToUse = currentSessionId;
     }
     
-    // Add user message to database immediately
-    await addMessageToCurrentSession("user", userInput);
+    // Add user message to database immediately using the correct session ID
+    await addMessageToCurrentSession("user", userInput, sessionIdToUse);
     
     // Set loading states immediately
     setIsStreaming(true);
@@ -112,7 +116,7 @@ const welcomeMessage = hasCalendarPermission
         body: JSON.stringify({ 
           messages: [...messagesToDisplay, userMessage],
           session: session,
-          sessionId: currentSessionId
+          sessionId: sessionIdToUse
         }),
       });
 
@@ -129,11 +133,11 @@ const welcomeMessage = hasCalendarPermission
       }
 
       // Add assistant response to database
-      await addMessageToCurrentSession("assistant", assistantText);
+      await addMessageToCurrentSession("assistant", assistantText, sessionIdToUse);
 
     } catch (err) {
       console.error("Chat error:", err);
-      await addMessageToCurrentSession("assistant", "Sorry, something went wrong. Please try again.");
+      await addMessageToCurrentSession("assistant", "Sorry, something went wrong. Please try again.", sessionIdToUse);
     } finally {
       setIsStreaming(false);
       setLoadingMessage("SIA is thinking..."); // Reset to default
@@ -252,7 +256,7 @@ const welcomeMessage = hasCalendarPermission
         className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
       >
         <div
-          className={`inline-flex max-w-[90%] p-3 sm:p-4 rounded-2xl shadow-sm break-words ${
+          className={`inline-flex max-w-[90%] p-3 sm:p-4 rounded-2xl shadow-sm wrap-break-word ${
             msg.role === "user"
               ? "bg-[hsl(218,28%,53%)] text-white"
               : msg.role === "assistant"
@@ -298,6 +302,7 @@ const welcomeMessage = hasCalendarPermission
             isStreaming={isStreaming}
             hasCalendarPermission={hasCalendarPermission}
             onKeyDown={handleKeyDown}
+            onRequestCalendarPermission={requestCalendarPermission}
           />
         </div>
       </div>
