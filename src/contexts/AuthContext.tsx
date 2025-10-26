@@ -12,6 +12,7 @@ interface AuthContextType {
   signInWithGooglePopup: () => Promise<void>
   signOut: () => Promise<void>
   requestCalendarPermission: () => Promise<void>
+  revokeCalendarPermission: () => Promise<void>
   hasCalendarPermission: boolean
 }
 
@@ -29,19 +30,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
+    console.log('Checking calendar permission for user:', session.user.email)
+    console.log('User metadata:', session.user.user_metadata)
+    console.log('Provider token available:', !!session.provider_token)
+
     // First check user metadata for calendar permission
     if (session.user.user_metadata?.calendar_permission_granted) {
+      console.log('Calendar permission found in metadata for:', session.user.email)
       setHasCalendarPermission(true)
       return
     }
 
     // If no metadata, check if we have provider token and can access calendar
     if (!session.provider_token) {
+      console.log('No provider token for:', session.user.email)
       setHasCalendarPermission(false)
       return
     }
 
     try {
+      console.log('Testing calendar access for:', session.user.email)
       // Check if we have calendar access by making a test request to Google Calendar API
       const response = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
         headers: {
@@ -49,9 +57,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
       })
       
+      console.log('Calendar test response for', session.user.email, ':', response.status, response.statusText)
+      
       if (response.ok) {
+        console.log('Calendar access confirmed for:', session.user.email)
         setHasCalendarPermission(true)
+        
         // Update user metadata to indicate calendar permission
+        console.log('Updating user metadata with calendar permission...')
         const { error: updateError } = await supabase.auth.updateUser({
           data: { 
             calendar_permission_granted: true,
@@ -61,12 +74,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (updateError) {
           console.error('Error updating user metadata:', updateError.message)
+        } else {
+          console.log('Successfully updated user metadata with calendar permission')
         }
       } else {
+        console.log('Calendar access denied for:', session.user.email)
         setHasCalendarPermission(false)
       }
     } catch (error) {
-      console.error('Error checking calendar permission:', error)
+      console.error('Error checking calendar permission for', session.user.email, ':', error)
       setHasCalendarPermission(false)
     }
   }
@@ -189,6 +205,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, 1000)
   }
 
+  const revokeCalendarPermission = async () => {
+    try {
+      console.log('Revoking calendar permission for:', user?.email)
+      
+      // Update user metadata to remove calendar permission
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: { 
+          calendar_permission_granted: false,
+          calendar_permission_revoked_date: new Date().toISOString()
+        }
+      })
+      
+      if (updateError) {
+        console.error('Error revoking calendar permission:', updateError.message)
+        throw updateError
+      }
+      
+      // Update local state
+      setHasCalendarPermission(false)
+      console.log('Calendar permission revoked successfully')
+    } catch (error) {
+      console.error('Error revoking calendar permission:', error)
+      throw error
+    }
+  }
+
   const signOut = async () => {
     const { error } = await supabase.auth.signOut()
     if (error) console.error('Sign out error:', error.message)
@@ -202,6 +244,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signInWithGooglePopup,
     signOut,
     requestCalendarPermission,
+    revokeCalendarPermission,
     hasCalendarPermission,
   }
 

@@ -19,6 +19,9 @@ export default function AuthButton() {
           <span className="text-sm text-gray-700">
             {user.user_metadata?.full_name || user.email}
           </span>
+          <span className="text-sm text-gray-700">
+            {user.user_metadata?.email || user.email}
+          </span>
         </div>
         <button
           onClick={async () => {

@@ -98,7 +98,7 @@ export default function CalendarPopupCallback() {
             provider: 'google',
             options: {
               redirectTo: `${window.location.origin}/auth/calendar-popup-callback`,
-              scopes: 'openid email profile https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events'
+              scopes: 'openid email profile https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar'
             }
           })
 
