@@ -1,46 +1,86 @@
 'use client';
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useAuth } from '@/contexts/AuthContext';
+import { useChat } from '@/contexts/ChatContext';
 
-type Message = {
-  role: "user" | "assistant" | "system";
-  content: string;
-};
+interface ChatInterfaceProps {
+  chatId?: string;
+}
 
-export default function ChatInterface() {
+export default function ChatInterface({ chatId }: ChatInterfaceProps) {
   const { hasCalendarPermission, session } = useAuth();
-  const [messages, setMessages] = useState<Message[]>([]);
-  // Add welcome message on component mount
-  useEffect(() => {
-    const welcomeMessage = hasCalendarPermission 
-      ? "Hello! I'm SIA, your wellness companion. I can help you with mindfulness, stress relief, and even check your calendar to help you plan a balanced day. How are you feeling today?"
-      : "Hello! I'm SIA, your wellness companion. I'm here to help you with mindfulness, stress relief, and finding balance in your day. How are you feeling today?";
-    
-    setMessages([
-      {
-        role: "assistant",
-        content: welcomeMessage,
-      },
-    ]);
-  }, [hasCalendarPermission]);
+  const { 
+    currentSessionId, 
+    currentMessages, 
+    isMessagesLoading,
+    addMessageToCurrentSession,
+    switchToSession,
+    createNewSession,
+    setCurrentSessionId,
+    setCurrentMessages
+  } = useChat();
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [isFetchingCalendar, setIsFetchingCalendar] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("SIA is thinking...");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Switch to the correct session when chatId changes
+  useEffect(() => {
+    if (chatId && chatId !== currentSessionId) {
+      switchToSession(chatId);
+    } else if (!chatId && currentSessionId) {
+      // If we're on /chat route (no chatId) but have a current session, clear it
+      setCurrentSessionId(null);
+      setCurrentMessages([]);
+    }
+  }, [chatId, currentSessionId, switchToSession]);
+
+  // Show welcome message for new/empty sessions
+  const getWelcomeMessage = () => {
+    return hasCalendarPermission 
+      ? "Hello! I'm SIA, your wellness companion. I can help you with mindfulness, stress relief, and even check your calendar to help you plan a balanced day. How are you feeling today?"
+      : "Hello! I'm SIA, your wellness companion. I'm here to help you with mindfulness, stress relief, and finding balance in your day. How are you feeling today?";
+  };
+
+  // Get messages to display (current messages or welcome message)
+  const messagesToDisplay = useMemo(() => {
+    // If we have messages, show them
+    if (currentMessages.length > 0) {
+      return currentMessages.map(msg => ({ role: msg.role, content: msg.content }));
+    }
+    
+    // If we have a current session ID but no messages, show welcome message
+    if (currentSessionId) {
+      return [{ role: "assistant" as const, content: getWelcomeMessage() }];
+    }
+    
+    // If no session, show welcome message
+    return [{ role: "assistant" as const, content: getWelcomeMessage() }];
+  }, [currentMessages, currentSessionId, hasCalendarPermission]);
+
   // Scroll to bottom whenever messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messagesToDisplay]);
 
   const sendMessage = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || !session?.user?.id) return;
 
-    const userMessage: Message = { role: "user", content: input };
-    setMessages(prev => [...prev, userMessage]);
+    const userMessage = { role: "user" as const, content: input };
+    const userInput = input;
     setInput("");
+    
+    // If no current session, create one first
+    if (!currentSessionId) {
+      const newSessionId = await createNewSession();
+      // Update URL to include the new session ID
+      window.history.pushState(null, '', `/chat/${newSessionId}`);
+    }
+    
+    // Add user message to database immediately
+    await addMessageToCurrentSession("user", userInput);
     
     // Set loading states immediately
     setIsStreaming(true);
@@ -48,39 +88,37 @@ export default function ChatInterface() {
     // Check if the message is calendar-related to show appropriate loading state
     const calendarKeywords = ['meeting', 'calendar', 'schedule', 'appointment', 'event', 'today', 'tomorrow', 'this week', 'upcoming', 'meet', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday', 'next', 'available', 'busy', 'free'];
     const isCalendarRelated = calendarKeywords.some(keyword => 
-      input.toLowerCase().includes(keyword)
+      userInput.toLowerCase().includes(keyword)
     );
     
     // Set appropriate loading message based on request type
     if (isCalendarRelated && hasCalendarPermission) {
       setIsFetchingCalendar(true);
-      if (input.toLowerCase().includes('meeting') || input.toLowerCase().includes('appointment')) {
+      if (userInput.toLowerCase().includes('meeting') || userInput.toLowerCase().includes('appointment')) {
         setLoadingMessage("SIA checking your meetings...");
-      } else if (input.toLowerCase().includes('schedule') || input.toLowerCase().includes('today') || input.toLowerCase().includes('tomorrow')) {
+      } else if (userInput.toLowerCase().includes('schedule') || userInput.toLowerCase().includes('today') || userInput.toLowerCase().includes('tomorrow')) {
         setLoadingMessage("SIA reviewing your schedule...");
       } else {
         setLoadingMessage("SIA checking your calendar...");
       }
-    } else if (input.toLowerCase().includes('wellness') || input.toLowerCase().includes('mindful') || input.toLowerCase().includes('stress') || input.toLowerCase().includes('meditation')) {
+    } else if (userInput.toLowerCase().includes('wellness') || userInput.toLowerCase().includes('mindful') || userInput.toLowerCase().includes('stress') || userInput.toLowerCase().includes('meditation')) {
       setLoadingMessage("SIA preparing wellness guidance...");
-    } else if (input.toLowerCase().includes('plan') || input.toLowerCase().includes('organize')) {
+    } else if (userInput.toLowerCase().includes('plan') || userInput.toLowerCase().includes('organize')) {
       setLoadingMessage("SIA analyzing your request...");
-    } else if (input.toLowerCase().includes('help') || input.toLowerCase().includes('how')) {
+    } else if (userInput.toLowerCase().includes('help') || userInput.toLowerCase().includes('how')) {
       setLoadingMessage("SIA gathering information...");
     } else {
       setLoadingMessage("SIA is thinking...");
     }
 
     try {
-      // Add empty assistant message first to show typing indicator
-      setMessages(prev => [...prev, { role: "assistant", content: "" }]);
-
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          messages: [...messages, userMessage],
-          session: session
+          messages: [...messagesToDisplay, userMessage],
+          session: session,
+          sessionId: currentSessionId
         }),
       });
 
@@ -94,20 +132,14 @@ export default function ChatInterface() {
         const { value, done } = await reader.read();
         if (done) break;
         assistantText += decoder.decode(value);
-        setMessages((prev) => {
-          // Update the last message (which should be the assistant message we just added)
-          const updated = [...prev];
-          updated[updated.length - 1] = { role: "assistant", content: assistantText };
-          return updated;
-        });
       }
+
+      // Add assistant response to database
+      await addMessageToCurrentSession("assistant", assistantText);
+
     } catch (err) {
       console.error("Chat error:", err);
-      setMessages((prev) => {
-        const updated = [...prev];
-        updated[updated.length - 1] = { role: "assistant", content: "Sorry, something went wrong. Please try again." };
-        return updated;
-      });
+      await addMessageToCurrentSession("assistant", "Sorry, something went wrong. Please try again.");
     } finally {
       setIsStreaming(false);
       setIsFetchingCalendar(false);
@@ -210,7 +242,7 @@ export default function ChatInterface() {
       )}
 
       {/* Quick Prompts */}
-      {messages.length <= 1 && (
+      {messagesToDisplay.length <= 1 && (
         <div className="p-4 border-b border-gray-200">
           <p className="text-sm text-gray-600 mb-3">Quick start:</p>
           <div className="flex flex-wrap gap-2">
@@ -229,28 +261,38 @@ export default function ChatInterface() {
 
       {/* Messages Container */}
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
-        {messages.map((msg, idx) => (
-          <div
-            key={idx}
-            className={`flex ${
-              msg.role === "user" ? "justify-end" : "justify-start"
-            }`}
-          >
-            <div
-              className={`max-w-[85%] sm:max-w-[80%] p-3 sm:p-4 rounded-2xl ${
-                msg.role === "user"
-                  ? "bg-blue-500 text-white rounded-br-md"
-                  : msg.role === "assistant"
-                  ? "bg-gray-100 text-gray-800 rounded-bl-md"
-                  : "bg-yellow-50 text-yellow-800 text-center text-sm italic"
-              }`}
-            >
-              <div className="whitespace-pre-wrap wrap-break-word">
-                {msg.content}
-              </div>
+        {isMessagesLoading && currentSessionId ? (
+          <div className="flex justify-center items-center h-32">
+            <div className="flex items-center space-x-2 text-gray-500">
+              <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              <span>Loading chat history...</span>
             </div>
           </div>
-        ))}
+        ) : (
+          messagesToDisplay.map((msg, idx) => (
+            <div
+              key={idx}
+              className={`flex ${
+                msg.role === "user" ? "justify-end" : "justify-start"
+              }`}
+            >
+              <div
+                className={`max-w-[85%] sm:max-w-[80%] p-3 sm:p-4 rounded-2xl ${
+                  msg.role === "user"
+                    ? "bg-blue-500 text-white rounded-br-md"
+                    : msg.role === "assistant"
+                    ? "bg-gray-100 text-gray-800 rounded-bl-md"
+                    : "bg-yellow-50 text-yellow-800 text-center text-sm italic"
+                }`}
+              >
+                <div className="whitespace-pre-wrap wrap-break-word">
+                  {msg.content}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+
         {isStreaming && (
           <div className="flex justify-start">
             <div className="bg-gray-100 text-gray-800 p-4 rounded-2xl rounded-bl-md max-w-[80%]">
@@ -273,10 +315,9 @@ export default function ChatInterface() {
       {/* Input Container */}
       <div className="border-t border-gray-200 p-3 sm:p-4">
         <div className="flex gap-2 sm:gap-3">
-           {/* calender connected */}
+          {/* calendar connected : calendar not connected */}
           <button>
-          c
-          {/* alender connected : calender not connected */}
+            c
           </button>
           <input
             type="text"
