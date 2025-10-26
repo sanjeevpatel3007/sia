@@ -6,9 +6,11 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
     return (
         <ProtectedRoute>
             <ChatProvider>
-                <div className="min-h-screen bg-gray-50">
+                <div className="min-h-screen bg-white">
                     <Navbar />
-                    {children}
+                    <div className="pt-16">
+                        {children}
+                    </div>
                 </div>
             </ChatProvider>
         </ProtectedRoute>

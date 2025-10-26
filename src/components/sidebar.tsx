@@ -1,12 +1,10 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { 
   MessageCircle, 
   Settings, 
   User, 
-  ChevronLeft, 
-  ChevronRight, 
   Plus,
   Trash2,
   Search
@@ -16,7 +14,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 
 export default function Sidebar() {
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(false) // Start closed for mobile
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const { 
@@ -28,6 +26,31 @@ export default function Sidebar() {
   } = useChat()
   const { session } = useAuth()
   const router = useRouter()
+
+  // Check if we're on large screens and listen for sidebar toggle events
+  useEffect(() => {
+    const checkScreenSize = () => {
+      if (window.innerWidth >= 1024) {
+        setOpen(true) // Always open on large screens
+      } else {
+        setOpen(false) // Start closed on smaller screens
+      }
+    }
+
+    // Listen for sidebar toggle events from navbar
+    const handleSidebarToggle = (event: CustomEvent) => {
+      setOpen(event.detail)
+    }
+
+    checkScreenSize()
+    window.addEventListener('resize', checkScreenSize)
+    window.addEventListener('sidebarToggle', handleSidebarToggle as EventListener)
+    
+    return () => {
+      window.removeEventListener('resize', checkScreenSize)
+      window.removeEventListener('sidebarToggle', handleSidebarToggle as EventListener)
+    }
+  }, [])
 
   const handleNewChat = async () => {
     try {
@@ -71,25 +94,36 @@ export default function Sidebar() {
   )
 
   return (
-    <aside className={` h-150 bg-white border-r border-gray-200 flex flex-col transition-all duration-300 relative
-      ${open ? 'w-64' : 'w-16'}`}>
+    <>
+      {/* Mobile overlay when sidebar is open */}
+      {open && (
+        <div 
+          className="fixed inset-0 bg-transparent bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setOpen(false)}
+        />
+      )}
+      
+      <aside className={`h-[calc(100vh-4rem)] bg-white border-r border-gray-100 flex flex-col transition-all duration-300
+        ${open ? 'w-64' : '-translate-x-full w-64'} lg:w-64 lg:translate-x-0 fixed lg:relative top-16 lg:top-0 left-0 z-50 lg:z-auto`}>
 
-      {/* Toggle Button */}
-      <button
-        className="absolute top-3 left-3 z-10 bg-gray-100 hover:bg-gray-200 rounded-full p-1.5 transition-colors"
-        onClick={() => setOpen((v) => !v)}
-        aria-label={open ? 'Close sidebar' : 'Open sidebar'}
-      >
-        {open ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
-      </button>
-
-     
+      {/* SAMA Branding */}
+      <div className={`px-3 pt-4 mb-6 ${open ? "" : "hidden"}`}>
+        <div className="flex items-center space-x-2">
+          <div className="w-8 h-8 rounded-full sama-bg-accent flex items-center justify-center">
+            <div className="w-4 h-4 rounded-full sama-bg-accent-light"></div>
+          </div>
+          <div>
+            <h2 className="text-lg font-bold sama-text-primary">SIA</h2>
+            <p className="text-xs sama-text-secondary">Wellness Assistant</p>
+          </div>
+        </div>
+      </div>
 
       {/* New Chat Button */}
       <div className={`px-3 mb-4 ${open ? "" : "hidden"}`}>
         <button
           onClick={handleNewChat}
-          className="w-full flex items-center gap-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm font-medium"
+          className="sama-button-primary w-full flex items-center gap-2 px-3 py-2 text-sm font-medium"
         >
           <Plus size={18} />
           New Chat
@@ -100,13 +134,13 @@ export default function Sidebar() {
       {open && (
         <div className="px-3 mb-4">
           <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 sama-text-secondary" />
             <input
               type="text"
               placeholder="Search chats..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6683AB] focus:border-transparent sama-text-secondary placeholder-gray-400"
             />
           </div>
         </div>
@@ -115,18 +149,18 @@ export default function Sidebar() {
       {/* Chat History */}
       <div className={`flex-1 ${open ? "px-3" : ""} overflow-y-auto`}>
         <div className={`${open ? "" : "hidden"}`}>
-          <div className="text-xs text-gray-400 mb-2 pl-2 leading-tight uppercase tracking-wide">Recent Chats</div>
+          <div className="text-xs sama-text-secondary mb-2 pl-2 leading-tight uppercase tracking-wide font-medium">Recent Chats</div>
           
           {isLoading ? (
             <div className="space-y-2">
               {[1, 2, 3].map(i => (
                 <div key={i} className="animate-pulse">
-                  <div className="h-12 bg-gray-200 rounded-lg"></div>
+                  <div className="h-12 sama-bg-accent rounded-lg"></div>
                 </div>
               ))}
             </div>
           ) : filteredSessions.length === 0 ? (
-            <div className="text-center text-gray-500 text-sm py-4">
+            <div className="text-center sama-text-secondary text-sm py-4">
               {searchQuery ? 'No chats found' : 'Start a conversation to see your chat history'}
             </div>
           ) : (
@@ -134,8 +168,8 @@ export default function Sidebar() {
               {filteredSessions.map(session => (
                 <li key={session.id} className="group relative">
                   <button
-                    className={`w-full flex items-start gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 text-gray-700 text-sm transition text-left
-                      ${currentSessionId === session.id ? 'bg-blue-100 font-semibold text-blue-700' : ''}`}
+                    className={`w-full flex items-start gap-2 px-3 py-2 rounded-lg hover:sama-bg-accent sama-text-secondary text-sm transition text-left
+                      ${currentSessionId === session.id ? 'sama-bg-accent font-semibold sama-text-primary' : ''}`}
                     onClick={() => handleChatClick(session.id)}
                   >
                     <MessageCircle size={18} className="shrink-0 mt-0.5" />
@@ -177,7 +211,7 @@ export default function Sidebar() {
 
       {/* User info at bottom */}
       <div className="flex items-center justify-center mb-6 mt-auto px-3">
-        <div className="flex items-center gap-2 text-gray-600 px-2 py-1 rounded-full">
+        <div className="flex items-center gap-2 sama-text-secondary px-2 py-1 rounded-full">
           <User size={22} />
           {open && (
             <div className="min-w-0">
@@ -191,7 +225,7 @@ export default function Sidebar() {
           )}
         </div>
         {open && (
-          <button className="ml-2 text-gray-400 hover:text-blue-400 p-1">
+          <button className="ml-2 text-gray-400 hover:sama-text-primary p-1">
             <Settings size={20} />
           </button>
         )}
@@ -200,19 +234,19 @@ export default function Sidebar() {
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-sm mx-4">
-            <h3 className="text-lg font-semibold mb-2">Delete Chat</h3>
-            <p className="text-gray-600 mb-4">Are you sure you want to delete this chat? This action cannot be undone.</p>
+          <div className="sama-card p-6 max-w-sm mx-4">
+            <h3 className="text-lg font-semibold mb-2 sama-text-primary">Delete Chat</h3>
+            <p className="sama-text-secondary mb-4">Are you sure you want to delete this chat? This action cannot be undone.</p>
             <div className="flex gap-2 justify-end">
               <button
                 onClick={() => setShowDeleteConfirm(null)}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                className="px-4 py-2 sama-text-secondary hover:sama-text-primary transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleDeleteSession(showDeleteConfirm)}
-                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded transition-colors"
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
               >
                 Delete
               </button>
@@ -220,6 +254,7 @@ export default function Sidebar() {
           </div>
         </div>
       )}
-    </aside>
+      </aside>
+    </>
   )
 }

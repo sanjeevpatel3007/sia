@@ -1,18 +1,6 @@
 
 import ChatInterface from '@/components/ChatInterface'
-import Sidebar from '@/components/sidebar'
 
 export default function ChatPage() {
-  return (
-    <div className=" flex">
-      <Sidebar />
-      <div className="flex-1">
-        <div className="max-w-6xl mx-auto px-4 py-4 sm:py-8">
-          <div className="max-w-5xl mx-auto">
-            <ChatInterface />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  return <ChatInterface />;
 }
