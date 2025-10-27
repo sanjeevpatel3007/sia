@@ -213,7 +213,7 @@ const welcomeMessage = hasCalendarPermission
                 </svg>
                 <span className="sama-text-primary text-sm font-medium">Calendar Connected - Ask about your schedule!</span>
               </div>
-              <div className="flex gap-2">
+              {/* <div className="flex gap-2">
                 <button
                   onClick={testCalendarAccess}
                   className="px-2 py-1 sama-button-primary text-xs"
@@ -226,7 +226,7 @@ const welcomeMessage = hasCalendarPermission
                 >
                   Debug Scopes
                 </button>
-              </div>
+              </div> */}
             </div>
           )}
 

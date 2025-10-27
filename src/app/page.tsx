@@ -114,9 +114,9 @@ export default function Home() {
           {/* Chat with SIA Section */}
           <div className="sama-card p-8 max-w-2xl mx-auto mb-12">
             <div className="mb-6">
-              <div className="w-20 h-20 mx-auto mb-4 rounded-full sama-bg-accent flex items-center justify-center">
+              {/* <div className="w-20 h-20 mx-auto mb-4 rounded-full sama-bg-accent flex items-center justify-center">
                 <span className="text-2xl">🧘‍♀️</span>
-              </div>
+              </div> */}
               <h3 className="text-2xl font-bold mb-3 sama-text-primary">Meet SIA</h3>
               <p className="text-lg sama-text-secondary leading-relaxed">
                 Your gentle AI wellness companion. SIA is here to guide you toward balance, 

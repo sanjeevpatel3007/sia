@@ -30,21 +30,25 @@ export default function ChatInput({
           <Tooltip>
             <TooltipTrigger asChild>
               <button 
-                className="p-2 rounded-lg sama-bg-accent hover:sama-bg-accent-light transition-colors shrink-0" 
+                className={`p-2 rounded-lg transition-colors shrink-0 ${
+                  hasCalendarPermission 
+                    ? "sama-bg-accent hover:sama-bg-accent-light" 
+                    : "bg-gray-100 hover:bg-gray-200 border border-gray-300"
+                }`}
                 onClick={hasCalendarPermission ? undefined : onRequestCalendarPermission}
                 disabled={isStreaming}
               >
                 {hasCalendarPermission ? (
                   <Calendar className="w-5 h-5 sama-text-primary" />
                 ) : (
-                  <Calendar className="w-5 h-5 text-gray-400" />
+                  <Calendar className="w-5 h-5 text-gray-500" />
                 )}
               </button>
             </TooltipTrigger>
             <TooltipContent>
               {hasCalendarPermission 
                 ? "Calendar Connected - Ask about your schedule!" 
-                : "Click to connect your Google Calendar"
+                : "Connect Google Calendar to get personalized wellness guidance based on your schedule"
               }
             </TooltipContent>
           </Tooltip>

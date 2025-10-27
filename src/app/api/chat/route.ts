@@ -85,7 +85,24 @@ Upcoming events (next 7 days): ${upcomingEvents.length > 0 ? upcomingEvents.slic
 Use this calendar information to help the user with their schedule, suggest wellness breaks between meetings, or help them plan their day mindfully.`;
       } catch (error) {
         console.error('Error fetching calendar data:', error);
-        calendarContext = `\n\nNote: I can see you have calendar access, but I'm having trouble fetching your calendar data right now. You can still tell me about your schedule and I'll help you plan wellness activities around it.`;
+        
+        // Provide more specific error messages based on the error type
+        let errorMessage = '';
+        if (error instanceof Error) {
+          if (error.message.includes('insufficient authentication scopes')) {
+            errorMessage = 'I notice your calendar permissions may need to be refreshed. Please click the calendar button to reconnect your Google Calendar for the best experience.';
+          } else if (error.message.includes('access token')) {
+            errorMessage = 'I\'m having trouble accessing your calendar right now. Please try clicking the calendar button to refresh your connection.';
+          } else if (error.message.includes('Calendar access test failed')) {
+            errorMessage = 'I can see you have calendar access, but I\'m having trouble fetching your calendar data right now. Please try reconnecting your calendar using the calendar button.';
+          } else {
+            errorMessage = 'I\'m experiencing some technical difficulties accessing your calendar. You can still tell me about your schedule and I\'ll help you plan wellness activities around it.';
+          }
+        } else {
+          errorMessage = 'I\'m having trouble accessing your calendar right now. You can still tell me about your schedule and I\'ll help you plan wellness activities around it.';
+        }
+        
+        calendarContext = `\n\nCALENDAR NOTE: ${errorMessage}`;
       }
     }
   }
@@ -106,9 +123,10 @@ Key characteristics:
 - When discussing calendar or schedule, help users find balance and wellness in their busy lives
 - Suggest mindful breaks, breathing exercises, or stress relief techniques between meetings
 - Help users plan their day with wellness in mind
+- If calendar access is unavailable, gracefully guide users to reconnect their calendar or work with them to plan wellness activities based on what they tell you about their schedule
 
 Remember: You're here to support their wellness journey, not to replace professional medical advice.${calendarContext}${memoryContext}`,
-    onFinish: async (result) => {
+    onFinish: async () => {
       // Note: Messages are now saved via individual message storage in the frontend
       console.log('Response generated, will be saved via frontend message storage');
     }

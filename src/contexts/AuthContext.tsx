@@ -37,11 +37,87 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // First check user metadata for calendar permission
     if (session.user.user_metadata?.calendar_permission_granted) {
       console.log('Calendar permission found in metadata for:', session.user.email)
-      setHasCalendarPermission(true)
+      
+      // If we have metadata permission but no provider token, we need to refresh the session
+      if (!session.provider_token) {
+        console.log('Metadata shows permission but no provider token. Refreshing session...')
+        try {
+          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
+          if (refreshError) {
+            console.error('Error refreshing session:', refreshError.message)
+            setHasCalendarPermission(false)
+            return
+          }
+          
+          if (refreshData.session?.provider_token) {
+            console.log('Session refreshed successfully, testing calendar access...')
+            // Test the refreshed token
+            const response = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
+              headers: {
+                'Authorization': `Bearer ${refreshData.session.provider_token}`,
+              },
+            })
+            
+            if (response.ok) {
+              console.log('Calendar access confirmed with refreshed token')
+              setHasCalendarPermission(true)
+            } else {
+              console.log('Calendar access failed with refreshed token, removing permission metadata')
+              // Remove the permission metadata since the token doesn't work
+              await supabase.auth.updateUser({
+                data: { 
+                  calendar_permission_granted: false,
+                  calendar_permission_revoked_date: new Date().toISOString()
+                }
+              })
+              setHasCalendarPermission(false)
+            }
+          } else {
+            console.log('No provider token after refresh, removing permission metadata')
+            await supabase.auth.updateUser({
+              data: { 
+                calendar_permission_granted: false,
+                calendar_permission_revoked_date: new Date().toISOString()
+              }
+            })
+            setHasCalendarPermission(false)
+          }
+        } catch (error) {
+          console.error('Error refreshing session:', error)
+          setHasCalendarPermission(false)
+        }
+      } else {
+        // We have both metadata permission and provider token, test it
+        try {
+          console.log('Testing calendar access for:', session.user.email)
+          const response = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
+            headers: {
+              'Authorization': `Bearer ${session.provider_token}`,
+            },
+          })
+          
+          if (response.ok) {
+            console.log('Calendar access confirmed for:', session.user.email)
+            setHasCalendarPermission(true)
+          } else {
+            console.log('Calendar access failed, removing permission metadata')
+            await supabase.auth.updateUser({
+              data: { 
+                calendar_permission_granted: false,
+                calendar_permission_revoked_date: new Date().toISOString()
+              }
+            })
+            setHasCalendarPermission(false)
+          }
+        } catch (error) {
+          console.error('Error testing calendar access:', error)
+          setHasCalendarPermission(false)
+        }
+      }
       return
     }
 
-    // If no metadata, check if we have provider token and can access calendar
+    // If no metadata permission, check if we have provider token and can access calendar
     if (!session.provider_token) {
       console.log('No provider token for:', session.user.email)
       setHasCalendarPermission(false)
@@ -92,8 +168,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setUser(session?.user ?? null)
-      // Only check calendar permission if user metadata indicates it was previously granted
-      if (session?.user?.user_metadata?.calendar_permission_granted) {
+      // Always check calendar permission when user is logged in
+      if (session?.user) {
         checkCalendarPermission(session)
       } else {
         setHasCalendarPermission(false)
@@ -107,8 +183,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
       setUser(session?.user ?? null)
-      // Only check calendar permission if user metadata indicates it was previously granted
-      if (session?.user?.user_metadata?.calendar_permission_granted) {
+      // Always check calendar permission when user is logged in
+      if (session?.user) {
         checkCalendarPermission(session)
       } else {
         setHasCalendarPermission(false)
