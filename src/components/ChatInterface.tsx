@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from '@/contexts/AuthContext';
 import { useChat } from '@/contexts/ChatContext';
 import ChatInput from './ChatInput';
 import QuickPrompts from './QuickPrompts';
 import Sidebar from './sidebar';
+import LoadingSteps from './LoadingSteps';
+import InteractiveMessage from './InteractiveMessage';
 
 interface ChatInterfaceProps {
   chatId?: string;
@@ -25,7 +27,8 @@ export default function ChatInterface({ chatId }: ChatInterfaceProps) {
   } = useChat();
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState("SIA is thinking...");
+  const [localMessages, setLocalMessages] = useState<Array<{ role: 'user' | 'assistant', content: string }>>([]);
+  const [questionType, setQuestionType] = useState<'calendar' | 'wellness' | 'general' | 'planning'>('general');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Switch to the correct session when chatId changes
@@ -39,21 +42,22 @@ export default function ChatInterface({ chatId }: ChatInterfaceProps) {
     }
   }, [chatId, currentSessionId, switchToSession, setCurrentSessionId, setCurrentMessages]);
 
- 
-  // Get messages to display (current messages or welcome message)
-  const messagesToDisplay = useMemo(() => {
-    // If we have messages, show them
+  // Load messages from database when session changes
+  useEffect(() => {
     if (currentMessages.length > 0) {
-      return currentMessages.map(msg => ({ role: msg.role, content: msg.content }));
+      setLocalMessages(currentMessages.map(msg => ({ role: msg.role, content: msg.content })));
+    } else {
+      // Show welcome message for new/empty sessions
+      const welcomeMessage = hasCalendarPermission 
+        ? "Namaste! I'm SIA. I help your wellness and balance using your calendar."
+        : "Namaste! I'm SIA. I help your wellness and daily balance.";
+      
+      setLocalMessages([{ role: "assistant" as const, content: welcomeMessage }]);
     }
-    
-   // Show welcome message for new/empty sessions
-const welcomeMessage = hasCalendarPermission 
-? "Namaste! I’m SIA. I help your wellness and balance using your calendar."
-: "Namaste! I’m SIA. I help your wellness and daily balance.";
-
-    return [{ role: "assistant" as const, content: welcomeMessage }];
   }, [currentMessages, hasCalendarPermission]);
+
+  // Get messages to display (use local state for immediate updates)
+  const messagesToDisplay = localMessages;
 
   // Scroll to bottom whenever messages change
   useEffect(() => {
@@ -67,6 +71,26 @@ const welcomeMessage = hasCalendarPermission
     const userInput = input;
     setInput("");
     
+    // Determine question type for loading steps
+    const calendarKeywords = ['meeting', 'calendar', 'schedule', 'appointment', 'event', 'today', 'tomorrow', 'this week', 'upcoming', 'meet', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday', 'next', 'available', 'busy', 'free'];
+    const wellnessKeywords = ['wellness', 'mindful', 'stress', 'meditation', 'breathing', 'relax', 'calm', 'anxiety', 'mental health', 'self-care'];
+    const planningKeywords = ['plan', 'organize', 'structure', 'arrange', 'prepare', 'schedule'];
+    
+    let detectedType: 'calendar' | 'wellness' | 'general' | 'planning' = 'general';
+    
+    if (calendarKeywords.some(keyword => userInput.toLowerCase().includes(keyword)) && hasCalendarPermission) {
+      detectedType = 'calendar';
+    } else if (wellnessKeywords.some(keyword => userInput.toLowerCase().includes(keyword))) {
+      detectedType = 'wellness';
+    } else if (planningKeywords.some(keyword => userInput.toLowerCase().includes(keyword))) {
+      detectedType = 'planning';
+    }
+    
+    setQuestionType(detectedType);
+    
+    // Add user message to local state immediately for instant display
+    setLocalMessages(prev => [...prev, userMessage]);
+    
     let sessionIdToUse: string;
     
     // If no current session, create one first
@@ -78,36 +102,11 @@ const welcomeMessage = hasCalendarPermission
       sessionIdToUse = currentSessionId;
     }
     
-    // Add user message to database immediately using the correct session ID
-    await addMessageToCurrentSession("user", userInput, sessionIdToUse);
+    // Add user message to database in background
+    addMessageToCurrentSession("user", userInput, sessionIdToUse).catch(console.error);
     
     // Set loading states immediately
     setIsStreaming(true);
-
-    // Check if the message is calendar-related to show appropriate loading state
-    const calendarKeywords = ['meeting', 'calendar', 'schedule', 'appointment', 'event', 'today', 'tomorrow', 'this week', 'upcoming', 'meet', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday', 'next', 'available', 'busy', 'free'];
-    const isCalendarRelated = calendarKeywords.some(keyword => 
-      userInput.toLowerCase().includes(keyword)
-    );
-    
-    // Set appropriate loading message based on request type
-    if (isCalendarRelated && hasCalendarPermission) {
-      if (userInput.toLowerCase().includes('meeting') || userInput.toLowerCase().includes('appointment')) {
-        setLoadingMessage("SIA checking your meetings...");
-      } else if (userInput.toLowerCase().includes('schedule') || userInput.toLowerCase().includes('today') || userInput.toLowerCase().includes('tomorrow')) {
-        setLoadingMessage("SIA reviewing your schedule...");
-      } else {
-        setLoadingMessage("SIA checking your calendar...");
-      }
-    } else if (userInput.toLowerCase().includes('wellness') || userInput.toLowerCase().includes('mindful') || userInput.toLowerCase().includes('stress') || userInput.toLowerCase().includes('meditation')) {
-      setLoadingMessage("SIA preparing wellness guidance...");
-    } else if (userInput.toLowerCase().includes('plan') || userInput.toLowerCase().includes('organize')) {
-      setLoadingMessage("SIA analyzing your request...");
-    } else if (userInput.toLowerCase().includes('help') || userInput.toLowerCase().includes('how')) {
-      setLoadingMessage("SIA gathering information...");
-    } else {
-      setLoadingMessage("SIA is thinking...");
-    }
 
     try {
       const res = await fetch("/api/chat", {
@@ -126,21 +125,39 @@ const welcomeMessage = hasCalendarPermission
       const decoder = new TextDecoder();
       let assistantText = "";
 
+      // Add empty assistant message to local state for streaming
+      const assistantMessage = { role: "assistant" as const, content: "" };
+      setLocalMessages(prev => [...prev, assistantMessage]);
+
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
         assistantText += decoder.decode(value);
+        
+        // Update the assistant message in local state for real-time display
+        setLocalMessages(prev => 
+          prev.map((msg, index) => 
+            index === prev.length - 1 && msg.role === "assistant" 
+              ? { ...msg, content: assistantText }
+              : msg
+          )
+        );
       }
 
-      // Add assistant response to database
-      await addMessageToCurrentSession("assistant", assistantText, sessionIdToUse);
+      // Add assistant response to database in background
+      addMessageToCurrentSession("assistant", assistantText, sessionIdToUse).catch(console.error);
 
     } catch (err) {
       console.error("Chat error:", err);
-      await addMessageToCurrentSession("assistant", "Sorry, something went wrong. Please try again.", sessionIdToUse);
+      const errorMessage = "Sorry, something went wrong. Please try again.";
+      
+      // Add error message to local state
+      setLocalMessages(prev => [...prev, { role: "assistant", content: errorMessage }]);
+      
+      // Add error message to database in background
+      addMessageToCurrentSession("assistant", errorMessage, sessionIdToUse).catch(console.error);
     } finally {
       setIsStreaming(false);
-      setLoadingMessage("SIA is thinking..."); // Reset to default
     }
   };
 
@@ -152,49 +169,6 @@ const welcomeMessage = hasCalendarPermission
     setInput(prompt);
   };
 
-  const testCalendarAccess = async () => {
-    try {
-      const response = await fetch('/api/test-calendar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session })
-      });
-      
-      const result = await response.json();
-      console.log('Calendar test result:', result);
-      
-      if (result.success) {
-        setInput('What meetings do I have today?');
-      } else {
-        alert(`Calendar test failed: ${result.message}\n\nError: ${result.error}\n\nSession data: ${JSON.stringify(result.sessionData, null, 2)}\n\nDetails: ${JSON.stringify(result.details, null, 2)}`);
-      }
-    } catch (error) {
-      console.error('Calendar test error:', error);
-      alert('Calendar test failed: ' + error);
-    }
-  };
-
-  const debugScopes = async () => {
-    try {
-      const response = await fetch('/api/debug-scopes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session })
-      });
-      
-      const result = await response.json();
-      console.log('Scope debug result:', result);
-      
-      if (result.success) {
-        alert(`Scopes Debug:\n\nScopes: ${result.scopes?.join(', ') || 'None'}\n\nToken Info: ${JSON.stringify(result.tokenInfo, null, 2)}`);
-      } else {
-        alert(`Scope debug failed: ${result.error}\n\nDetails: ${JSON.stringify(result.details, null, 2)}`);
-      }
-    } catch (error) {
-      console.error('Scope debug error:', error);
-      alert('Scope debug failed: ' + error);
-    }
-  };
 
   return (
     <div className="flex h-[calc(100vh-4rem)]">
@@ -264,30 +238,17 @@ const welcomeMessage = hasCalendarPermission
               : "bg-yellow-50 text-yellow-800 text-center text-sm italic"
           }`}
         >
-          <div className="whitespace-pre-wrap leading-relaxed">
-            {msg.content}
-          </div>
+          <InteractiveMessage 
+            content={msg.content} 
+            hasCalendarPermission={hasCalendarPermission}
+            onRequestCalendarPermission={requestCalendarPermission}
+          />
         </div>
       </div>
     ))
   )}
 
-  {isStreaming && (
-    <div className="flex justify-start">
-      <div className="inline-flex max-w-[90%] bg-[hsl(47,71%,90%)] text-[hsl(218,28%,53%)] p-4 rounded-2xl shadow-sm">
-        <div className="flex items-center space-x-2">
-          <div className="flex items-center space-x-1">
-            <div className="w-2 h-2 bg-[hsl(32,100%,97%)] rounded-full animate-bounce"></div>
-            <div className="w-2 h-2 bg-[hsl(32,100%,97%)] rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-            <div className="w-2 h-2 bg-[hsl(32,100%,97%)] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-          </div>
-          <span className="text-sm">
-            {loadingMessage}
-          </span>
-        </div>
-      </div>
-    </div>
-  )}
+  <LoadingSteps questionType={questionType} isActive={isStreaming} />
 
   <div ref={messagesEndRef} />
 </div>

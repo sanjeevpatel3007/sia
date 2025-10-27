@@ -125,6 +125,8 @@ Key characteristics:
 - Help users plan their day with wellness in mind
 - If calendar access is unavailable, gracefully guide users to reconnect their calendar or work with them to plan wellness activities based on what they tell you about their schedule
 
+IMPORTANT: When users ask calendar-related questions but don't have calendar access, include [CALENDAR_BUTTON] in your response to show a connect calendar button.
+
 Remember: You're here to support their wellness journey, not to replace professional medical advice.${calendarContext}${memoryContext}`,
     onFinish: async () => {
       // Note: Messages are now saved via individual message storage in the frontend
