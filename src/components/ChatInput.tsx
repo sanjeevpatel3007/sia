@@ -15,6 +15,9 @@ import {
   PromptInputTools,
   PromptInputButton,
 } from "@/components/ai-elements/prompt-input";
+import QuickPrompts from "./QuickPrompts";
+import { ChatMessage } from "@/contexts/ChatContext";
+import { UIMessage } from "ai";
 
 interface ChatInputProps {
   input: string;
@@ -23,6 +26,8 @@ interface ChatInputProps {
   isStreaming: boolean;
   hasCalendarPermission: boolean;
   onRequestCalendarPermission?: () => void;
+  messages: UIMessage[];
+  handleQuickPrompt: (prompt: string) => void;
 }
 
 export default function ChatInput({
@@ -32,6 +37,8 @@ export default function ChatInput({
   isStreaming,
   hasCalendarPermission,
   onRequestCalendarPermission,
+  messages,
+  handleQuickPrompt,
 }: ChatInputProps) {
   const handleSubmit = (message: { text?: string }) => {
     if (message.text && message.text.trim()) {
@@ -41,6 +48,12 @@ export default function ChatInput({
 
   return (
     <div className="absolute bottom-0 w-full left-0 z-50 pb-2">
+      {messages.length <= 1 && (
+        <QuickPrompts
+          hasCalendarPermission={hasCalendarPermission}
+          onPromptClick={handleQuickPrompt}
+        />
+      )}
       <PromptInput
         onSubmit={handleSubmit}
         className="max-w-4xl mx-auto bg-background overflow-hidden rounded-2xl border border-border shadow-lg"

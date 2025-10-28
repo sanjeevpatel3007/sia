@@ -13,8 +13,9 @@ export interface ChatMessage {
   id?: string;
   user_id: string;
   session_id: string;
-  role: 'user' | 'assistant';
-  content: string;
+  role: 'user' | 'assistant' | 'system' | 'tool';
+  content?: string; // Kept for backward compatibility
+  parts?: any[]; // UIMessage parts array
   created_at?: string;
   metadata?: Record<string, unknown>;
 }

@@ -12,7 +12,7 @@ import {
   addIntelligentMemories,
   formatMemoriesForContext,
 } from "@/lib/mem0";
-import { generateSessionId, addMessageToSession } from "@/lib/database";
+import { generateSessionId, saveUIMessage } from "@/lib/database";
 import { supabase } from "@/lib/supabase";
 import { calendarTools } from "@/lib/calendar-tools";
 
@@ -144,22 +144,18 @@ Remember: You're here to support their wellness journey, not to replace professi
             ]);
           }
 
-          // Save the user message (last message in the array)
-          const userMessage = getMessageText(messages[messages.length - 1]);
-          await addMessageToSession(
-            currentSessionId,
-            userId,
-            "user",
-            userMessage
-          );
+          // Save the user message (last message in the array) with full parts
+          const userUIMessage = messages[messages.length - 1];
+          await saveUIMessage(userUIMessage, currentSessionId, userId);
 
-          // Save the assistant response
-          await addMessageToSession(
-            currentSessionId,
-            userId,
-            "assistant",
-            text
-          );
+          // Save the assistant response with full parts
+          // Create a UIMessage from the text response
+          const assistantUIMessage: UIMessage = {
+            id: `msg-${Date.now()}`,
+            role: 'assistant',
+            parts: [{ type: 'text', text }],
+          };
+          await saveUIMessage(assistantUIMessage, currentSessionId, userId);
 
           console.log("Messages saved to database");
         } catch (error) {

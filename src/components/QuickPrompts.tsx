@@ -1,6 +1,6 @@
 'use client';
 
-import { Badge } from '@/components/ui/badge';
+import { Suggestions, Suggestion } from '@/components/ai-elements/suggestion';
 
 interface QuickPromptsProps {
   hasCalendarPermission: boolean;
@@ -30,20 +30,15 @@ export default function QuickPrompts({ hasCalendarPermission, onPromptClick }: Q
   ];
 
   return (
-    <div className="p-4 border-b border-border">
-      <p className="text-sm text-muted-foreground mb-3 font-medium">Quick start:</p>
-      <div className="flex flex-wrap gap-2">
-        {allPrompts.map((prompt, index) => (
-          <Badge
-            key={index}
-            variant="secondary"
-            onClick={() => onPromptClick(prompt)}
-            className="px-3 py-1 rounded-full text-xs cursor-pointer hover:bg-accent transition-colors font-medium"
-          >
-            {prompt}
-          </Badge>
-        ))}
+    <div className="border-t border-border bg-background/50">
+      <div className="px-4 pt-3">
+        <p className="text-sm text-muted-foreground mb-2 font-medium">Quick start:</p>
       </div>
+      <Suggestions className="px-4 pb-3">
+        {allPrompts.map((prompt, index) => (
+          <Suggestion key={index} suggestion={prompt} onClick={onPromptClick} />
+        ))}
+      </Suggestions>
     </div>
   );
 }

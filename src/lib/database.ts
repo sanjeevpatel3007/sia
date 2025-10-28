@@ -5,8 +5,9 @@ export interface ChatMessage {
   id?: string;
   user_id: string;
   session_id: string;
-  role: 'user' | 'assistant';
-  content: string;
+  role: 'user' | 'assistant' | 'system' | 'tool';
+  content?: string; // Kept for backward compatibility, prefer parts
+  parts?: any[]; // UIMessage parts array
   created_at?: string;
   metadata?: Record<string, unknown>;
 }
@@ -15,8 +16,11 @@ export interface ChatMessage {
 export function convertDbMessageToUIMessage(dbMessage: ChatMessage): UIMessage {
   return {
     id: dbMessage.id || `${dbMessage.role}-${Date.now()}`,
-    role: dbMessage.role,
-    parts: [{ type: 'text' as const, text: dbMessage.content }],
+    role: dbMessage.role as any,
+    // Use parts if available, fallback to content for old messages
+    parts: dbMessage.parts && dbMessage.parts.length > 0
+      ? dbMessage.parts
+      : [{ type: 'text' as const, text: dbMessage.content || '' }],
   };
 }
 
@@ -25,6 +29,7 @@ export function convertUIMessageToDbMessage(
   userId: string,
   sessionId: string
 ): Omit<ChatMessage, 'id' | 'created_at'> {
+  // Extract text content for backward compatibility
   const content = uiMessage.parts
     .filter(part => part.type === 'text')
     .map(part => part.text)
@@ -33,8 +38,9 @@ export function convertUIMessageToDbMessage(
   return {
     user_id: userId,
     session_id: sessionId,
-    role: uiMessage.role as 'user' | 'assistant',
-    content,
+    role: uiMessage.role as 'user' | 'assistant' | 'system' | 'tool',
+    content, // Keep for backward compatibility
+    parts: uiMessage.parts, // Store full parts array
   };
 }
 
@@ -337,12 +343,13 @@ export async function getSessionMessages(sessionId: string, limit: number = 100)
   }
 }
 
-// Add a message to a session
+// Add a message to a session (with full UIMessage support)
 export async function addMessageToSession(
-  sessionId: string, 
-  userId: string, 
-  role: 'user' | 'assistant', 
-  content: string
+  sessionId: string,
+  userId: string,
+  role: 'user' | 'assistant' | 'system' | 'tool',
+  content: string,
+  parts?: any[] // Optional parts array from UIMessage
 ) {
   try {
     const { data, error } = await supabase
@@ -351,7 +358,8 @@ export async function addMessageToSession(
         session_id: sessionId,
         user_id: userId,
         role,
-        content,
+        content, // Keep for backward compatibility
+        parts: parts || [{ type: 'text', text: content }], // Save parts array
         created_at: new Date().toISOString()
       }])
       .select()
@@ -368,6 +376,39 @@ export async function addMessageToSession(
     return data as ChatMessage;
   } catch (error) {
     console.error('Error adding message to session:', error);
+    throw error;
+  }
+}
+
+// Save a full UIMessage to database
+export async function saveUIMessage(
+  uiMessage: UIMessage,
+  sessionId: string,
+  userId: string
+) {
+  const dbMessage = convertUIMessageToDbMessage(uiMessage, userId, sessionId);
+
+  try {
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .insert([{
+        ...dbMessage,
+        created_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Update session's updated_at timestamp
+    await supabase
+      .from('chat_sessions')
+      .update({ updated_at: new Date().toISOString() })
+      .eq('id', sessionId);
+
+    return data as ChatMessage;
+  } catch (error) {
+    console.error('Error saving UIMessage:', error);
     throw error;
   }
 }

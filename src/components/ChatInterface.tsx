@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useChat as useVercelChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useAuth } from "@/contexts/AuthContext";
-import { useChat as useChatContext } from "@/contexts/ChatContext";
+import { useChat as useChatContext, ChatMessage } from "@/contexts/ChatContext";
 import ChatInput from "./ChatInput";
 import QuickPrompts from "./QuickPrompts";
 import Sidebar from "./sidebar";
@@ -15,12 +15,20 @@ import {
   ConversationContent,
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
+import {
+  Message,
+  MessageContent as MessageContentWrapper,
+} from "@/components/ai-elements/message";
 
 interface ChatInterfaceProps {
   chatId?: string;
+  initialMessages?: ChatMessage[];
 }
 
-export default function ChatInterface({ chatId }: ChatInterfaceProps) {
+export default function ChatInterface({
+  chatId,
+  initialMessages = [],
+}: ChatInterfaceProps) {
   const { hasCalendarPermission, session, requestCalendarPermission } =
     useAuth();
   const {
@@ -34,18 +42,41 @@ export default function ChatInterface({ chatId }: ChatInterfaceProps) {
   } = useChatContext();
 
   const [input, setInput] = useState("");
-  const [hasLoadedHistory, setHasLoadedHistory] = useState(false);
 
-  // Initialize Vercel AI SDK's useChat hook
+  // Convert initial messages to AI SDK format
+  const convertedInitialMessages = initialMessages.map((msg) => ({
+    id: msg.id || `${msg.role}-${Date.now()}`,
+    role: msg.role as any,
+    parts:
+      msg.parts && msg.parts.length > 0
+        ? msg.parts
+        : [{ type: "text" as const, text: msg.content || "" }],
+  }));
+
+  // Initialize Vercel AI SDK's useChat hook with initial messages
   const {
     messages,
     sendMessage: sendVercelMessage,
     status,
-    setMessages,
   } = useVercelChat({
     transport: new DefaultChatTransport({
       api: "/api/chat",
     }),
+    messages:
+      convertedInitialMessages.length > 0
+        ? convertedInitialMessages
+        : [
+            {
+              id: "1",
+              role: "assistant",
+              parts: [
+                {
+                  type: "text",
+                  text: "Namaste! I'm SIA. I help your wellness and daily balance.",
+                },
+              ],
+            },
+          ],
     onFinish: async () => {
       // Refresh sessions to update sidebar
       await refreshSessions();
@@ -53,17 +84,13 @@ export default function ChatInterface({ chatId }: ChatInterfaceProps) {
     },
   });
 
-  // Switch to the correct session when chatId changes
+  // Update context when chatId changes
   useEffect(() => {
     if (chatId && chatId !== currentSessionId) {
       switchToSession(chatId);
-      setHasLoadedHistory(false); // Reset flag when switching sessions
     } else if (!chatId && currentSessionId) {
-      // If we're on /chat route (no chatId) but have a current session, clear it
       setCurrentSessionId(null);
       setCurrentMessages([]);
-      setMessages([]); // Clear AI SDK messages too
-      setHasLoadedHistory(false);
     }
   }, [
     chatId,
@@ -71,63 +98,6 @@ export default function ChatInterface({ chatId }: ChatInterfaceProps) {
     switchToSession,
     setCurrentSessionId,
     setCurrentMessages,
-    setMessages,
-  ]);
-
-  // Load messages from database ONLY when switching sessions or on initial load
-  // Don't reload during active chat to prevent overwriting optimistic updates
-  useEffect(() => {
-    // Skip if already loaded or currently loading
-
-    if (currentSessionId) {
-      // Loading an existing session with history
-      if (currentMessages.length > 0) {
-        // Convert database messages to AI SDK format
-        const aiMessages = currentMessages.map((msg) => ({
-          id: msg.id || `${msg.role}-${Date.now()}`,
-          role: msg.role,
-          parts: [{ type: "text" as const, text: msg.content }],
-        }));
-        console.log({ aiMessages });
-        setMessages(aiMessages);
-        setHasLoadedHistory(true);
-      } else if (!isMessagesLoading) {
-        // Session exists but no messages yet - show welcome
-        const welcomeMessage = hasCalendarPermission
-          ? "Namaste! I'm SIA. I help your wellness and balance using your calendar."
-          : "Namaste! I'm SIA. I help your wellness and daily balance.";
-
-        setMessages([
-          {
-            id: "welcome",
-            role: "assistant" as const,
-            parts: [{ type: "text" as const, text: welcomeMessage }],
-          },
-        ]);
-        setHasLoadedHistory(true);
-      }
-    } else {
-      // No session - show welcome message for new chat
-      const welcomeMessage = hasCalendarPermission
-        ? "Namaste! I'm SIA. I help your wellness and balance using your calendar."
-        : "Namaste! I'm SIA. I help your wellness and daily balance.";
-
-      setMessages([
-        {
-          id: "welcome",
-          role: "assistant" as const,
-          parts: [{ type: "text" as const, text: welcomeMessage }],
-        },
-      ]);
-      setHasLoadedHistory(true);
-    }
-  }, [
-    currentSessionId,
-    currentMessages,
-    hasCalendarPermission,
-    setMessages,
-    hasLoadedHistory,
-    isMessagesLoading,
   ]);
 
   const sendMessage = async () => {
@@ -139,11 +109,6 @@ export default function ChatInterface({ chatId }: ChatInterfaceProps) {
     // Use chatId (from URL) as the session ID
     // Backend will create session if it doesn't exist yet
     const sessionIdToUse = chatId || currentSessionId;
-
-    // If this is a new chat, mark history as loaded to prevent DB overwrites
-    if (!currentSessionId && chatId) {
-      setHasLoadedHistory(true);
-    }
 
     // Use Vercel AI SDK's sendMessage with custom body data
     await sendVercelMessage(
@@ -207,14 +172,6 @@ export default function ChatInterface({ chatId }: ChatInterfaceProps) {
             </div>
           )}
 
-          {/* Quick Prompts */}
-          {messages.length <= 1 && (
-            <QuickPrompts
-              hasCalendarPermission={hasCalendarPermission}
-              onPromptClick={handleQuickPrompt}
-            />
-          )}
-
           {/* Messages Container with Conversation Component */}
           <Conversation className="flex-1 w-full max-w-5xl mx-auto">
             <ConversationContent className="space-y-4">
@@ -227,26 +184,22 @@ export default function ChatInterface({ chatId }: ChatInterfaceProps) {
                 </div>
               ) : (
                 <>
-                  {messages.map((msg: any, idx: number) => {
-                    return (
-                      <div
-                        key={msg.id || idx}
-                        className={`flex ${
-                          msg.role === "user" ? "justify-end" : "justify-start"
-                        } flex-col gap-2`}
-                      >
-                        {msg.parts.map((part: any, partIdx: number) => {
-                          // Render text parts
-                          if (part.type === "text") {
-                            return (
-                              <div
-                                key={partIdx}
-                                className={`inline-flex max-w-[90%] p-3 sm:p-4 rounded-2xl shadow-sm wrap-break-word ${
-                                  msg.role === "user"
-                                    ? "bg-secondary text-secondary-foreground ml-auto"
-                                    : "bg-accent text-accent-foreground"
-                                }`}
-                              >
+                  {messages.map((msg: any, idx: number) => (
+                    <div key={msg.id || idx} className="space-y-0">
+                      {msg.parts.map((part: any, partIdx: number) => {
+                        const isToolPart =
+                          typeof part.type === "string" &&
+                          part.type.startsWith("tool-") &&
+                          "state" in part;
+
+                        // Render text parts inside Message UI
+                        if (part.type === "text") {
+                          return (
+                            <Message
+                              key={`${msg.id || idx}-${partIdx}`}
+                              from={msg.role}
+                            >
+                              <MessageContentWrapper variant="contained">
                                 <MessageContent
                                   content={part.text}
                                   hasCalendarPermission={hasCalendarPermission}
@@ -254,49 +207,80 @@ export default function ChatInterface({ chatId }: ChatInterfaceProps) {
                                     requestCalendarPermission
                                   }
                                 />
-                              </div>
-                            );
-                          }
+                              </MessageContentWrapper>
+                            </Message>
+                          );
+                        }
 
-                          // Render calendar tool invocations
-                          if (
-                            part.type.startsWith("tool-") &&
-                            "state" in part
-                          ) {
-                            const toolName = part.type.replace("tool-", "");
-                            const toolPart = part as any; // Type assertion for tool parts
+                        // Render calendar tool invocations inside Message UI
+                        if (isToolPart) {
+                          const toolName = part.type.replace("tool-", "");
+                          const toolPart = part as any;
 
-                            return (
-                              <div
-                                key={partIdx}
-                                className="max-w-[90%] p-3 sm:p-4 rounded-lg border border-border bg-muted/50"
-                              >
-                                {toolPart.state === "input-streaming" && (
-                                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                                    <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
-                                    <span>Preparing to access calendar...</span>
-                                  </div>
-                                )}
+                          return (
+                            <Message
+                              key={`${msg.id || idx}-${partIdx}`}
+                              from={msg.role}
+                            >
+                              <MessageContentWrapper variant="flat">
+                                <div className="flex w-full p-3 sm:p-4 rounded-lg border border-border bg-muted">
+                                  {toolPart.state === "input-streaming" && (
+                                    <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                                      <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
+                                      <span>
+                                        Preparing to access calendar...
+                                      </span>
+                                    </div>
+                                  )}
 
-                                {toolPart.state === "input-available" && (
-                                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                                    <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
-                                    <span>
-                                      {toolName === "getTodayEvents" &&
-                                        "Fetching today's schedule..."}
-                                      {toolName === "getUpcomingEvents" &&
-                                        "Fetching upcoming events..."}
-                                      {toolName === "searchCalendarEvents" &&
-                                        `Searching calendar for "${toolPart.input?.query}"...`}
-                                      {toolName === "getEventsInRange" &&
-                                        "Fetching events in date range..."}
-                                    </span>
-                                  </div>
-                                )}
+                                  {toolPart.state === "input-available" && (
+                                    <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                                      <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
+                                      <span>
+                                        {toolName === "getTodayEvents" &&
+                                          "Fetching today's schedule..."}
+                                        {toolName === "getUpcomingEvents" &&
+                                          "Fetching upcoming events..."}
+                                        {toolName === "searchCalendarEvents" &&
+                                          `Searching calendar for "${toolPart.input?.query}"...`}
+                                        {toolName === "getEventsInRange" &&
+                                          "Fetching events in date range..."}
+                                      </span>
+                                    </div>
+                                  )}
 
-                                {toolPart.state === "output-available" && (
-                                  <div className="space-y-2">
-                                    <div className="flex items-center gap-2 text-primary text-sm font-medium">
+                                  {toolPart.state === "output-available" && (
+                                    <div className="space-y-2">
+                                      <div className="flex items-center gap-2 text-primary text-sm font-medium">
+                                        <svg
+                                          className="w-4 h-4"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M5 13l4 4L19 7"
+                                          />
+                                        </svg>
+                                        <span>Calendar data retrieved</span>
+                                      </div>
+                                      {toolPart.output?.events?.length > 0 && (
+                                        <div className="text-xs text-muted-foreground">
+                                          Found {toolPart.output.events.length}{" "}
+                                          event
+                                          {toolPart.output.events.length > 1
+                                            ? "s"
+                                            : ""}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {toolPart.state === "output-error" && (
+                                    <div className="flex items-center gap-2 text-destructive text-sm">
                                       <svg
                                         className="w-4 h-4"
                                         fill="none"
@@ -307,50 +291,22 @@ export default function ChatInterface({ chatId }: ChatInterfaceProps) {
                                           strokeLinecap="round"
                                           strokeLinejoin="round"
                                           strokeWidth={2}
-                                          d="M5 13l4 4L19 7"
+                                          d="M6 18L18 6M6 6l12 12"
                                         />
                                       </svg>
-                                      <span>Calendar data retrieved</span>
+                                      <span>Failed to access calendar</span>
                                     </div>
-                                    {toolPart.output?.events?.length > 0 && (
-                                      <div className="text-xs text-muted-foreground">
-                                        Found {toolPart.output.events.length}{" "}
-                                        event
-                                        {toolPart.output.events.length > 1
-                                          ? "s"
-                                          : ""}
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
+                                  )}
+                                </div>
+                              </MessageContentWrapper>
+                            </Message>
+                          );
+                        }
 
-                                {toolPart.state === "output-error" && (
-                                  <div className="flex items-center gap-2 text-destructive text-sm">
-                                    <svg
-                                      className="w-4 h-4"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M6 18L18 6M6 6l12 12"
-                                      />
-                                    </svg>
-                                    <span>Failed to access calendar</span>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          }
-
-                          return null;
-                        })}
-                      </div>
-                    );
-                  })}
+                        return null;
+                      })}
+                    </div>
+                  ))}
 
                   {status === "submitted" && <LoadingSteps />}
                   <div className="pb-24" />
@@ -362,6 +318,8 @@ export default function ChatInterface({ chatId }: ChatInterfaceProps) {
             <ConversationScrollButton />
           </Conversation>
 
+          {/* Quick Prompts above input */}
+
           {/* Chat Input Component */}
           <ChatInput
             input={input}
@@ -370,6 +328,8 @@ export default function ChatInterface({ chatId }: ChatInterfaceProps) {
             isStreaming={status === "streaming"}
             hasCalendarPermission={hasCalendarPermission}
             onRequestCalendarPermission={requestCalendarPermission}
+            messages={messages}
+            handleQuickPrompt={(prompt: string) => setInput(prompt)}
           />
         </div>
       </div>
