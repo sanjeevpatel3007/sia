@@ -81,17 +81,17 @@ export default function LoadingSteps({ questionType, isActive }: LoadingStepsPro
 
   return (
     <div className="flex justify-start">
-      <div className="inline-flex max-w-[90%] bg-[hsl(47,71%,90%)] text-[hsl(218,28%,53%)] p-4 rounded-2xl shadow-sm">
+      <div className="inline-flex max-w-[90%] bg-accent text-accent-foreground p-4 rounded-2xl shadow-sm">
         <div className="space-y-3 w-full">
           <div className="flex items-center space-x-2">
             <div className="flex items-center space-x-1">
-              <div className="w-2 h-2 bg-[hsl(32,100%,97%)] rounded-full animate-bounce"></div>
-              <div className="w-2 h-2 bg-[hsl(32,100%,97%)] rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-              <div className="w-2 h-2 bg-[hsl(32,100%,97%)] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+              <div className="w-2 h-2 bg-muted rounded-full animate-bounce"></div>
+              <div className="w-2 h-2 bg-muted rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+              <div className="w-2 h-2 bg-muted rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
             </div>
             <span className="text-sm font-medium">SIA is working on your request...</span>
           </div>
-          
+
           <div className="space-y-2">
             {steps.map((step) => (
               <div
@@ -101,11 +101,11 @@ export default function LoadingSteps({ questionType, isActive }: LoadingStepsPro
                 }`}
               >
                 <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 ${
-                  step.completed 
-                    ? 'bg-green-500 text-white' 
-                    : step.active 
-                    ? 'bg-[hsl(218,28%,53%)] text-white animate-pulse' 
-                    : 'bg-gray-200 text-gray-400'
+                  step.completed
+                    ? 'bg-primary text-primary-foreground'
+                    : step.active
+                    ? 'bg-secondary text-secondary-foreground animate-pulse'
+                    : 'bg-muted text-muted-foreground'
                 }`}>
                   {step.completed ? (
                     <CheckCircle className="w-4 h-4" />
@@ -114,19 +114,19 @@ export default function LoadingSteps({ questionType, isActive }: LoadingStepsPro
                   )}
                 </div>
                 <span className={`text-sm transition-all duration-300 ${
-                  step.completed 
-                    ? 'text-green-600 font-medium' 
-                    : step.active 
-                    ? 'text-[hsl(218,28%,53%)] font-medium' 
-                    : 'text-gray-500'
+                  step.completed
+                    ? 'text-primary font-medium'
+                    : step.active
+                    ? 'text-accent-foreground font-medium'
+                    : 'text-muted-foreground'
                 }`}>
                   {step.label}
                 </span>
                 {step.active && (
                   <div className="flex items-center space-x-1">
-                    <div className="w-1 h-1 bg-[hsl(218,28%,53%)] rounded-full animate-bounce"></div>
-                    <div className="w-1 h-1 bg-[hsl(218,28%,53%)] rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-1 h-1 bg-[hsl(218,28%,53%)] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-1 h-1 bg-secondary rounded-full animate-bounce"></div>
+                    <div className="w-1 h-1 bg-secondary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-1 h-1 bg-secondary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                   </div>
                 )}
               </div>

@@ -244,41 +244,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const requestCalendarPermission = async () => {
-    const popup = window.open(
-      `${window.location.origin}/auth/calendar-popup-callback`,
-      'google-calendar-auth',
-      'width=500,height=600,scrollbars=yes,resizable=yes'
-    )
-
-    if (!popup) {
-      console.error('Popup blocked. Please allow popups for this site.')
-      return
-    }
-
-    // Listen for messages from the popup
-    const messageListener = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return
-
-      if (event.data.type === 'GOOGLE_CALENDAR_AUTH_SUCCESS') {
-        popup.close()
-        window.removeEventListener('message', messageListener)
-        // The auth state will be updated automatically via onAuthStateChange
-      } else if (event.data.type === 'GOOGLE_CALENDAR_AUTH_ERROR') {
-        popup.close()
-        window.removeEventListener('message', messageListener)
-        console.error('Google calendar permission error:', event.data.error)
+    // Use redirect instead of popup for calendar permission
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/calendar-callback`,
+        scopes: 'https://www.googleapis.com/auth/calendar.readonly',
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
       }
-    }
-
-    window.addEventListener('message', messageListener)
-
-    // Check if popup is closed manually
-    const checkClosed = setInterval(() => {
-      if (popup.closed) {
-        clearInterval(checkClosed)
-        window.removeEventListener('message', messageListener)
-      }
-    }, 1000)
+    })
+    if (error) console.error('Google calendar permission error:', error.message)
   }
 
   const revokeCalendarPermission = async () => {

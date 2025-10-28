@@ -260,10 +260,10 @@ export default function ChatInterface({ chatId }: ChatInterfaceProps) {
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Calendar Status */}
           {hasCalendarPermission && (
-            <div className="sama-bg-accent border-b border-gray-100 p-3 flex items-center justify-between">
+            <div className="bg-accent border-b border-border p-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <svg
-                  className="w-4 h-4 sama-text-primary"
+                  className="w-4 h-4 text-accent-foreground"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -275,7 +275,7 @@ export default function ChatInterface({ chatId }: ChatInterfaceProps) {
                     d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                   />
                 </svg>
-                <span className="sama-text-primary text-sm font-medium">
+                <span className="text-accent-foreground text-sm font-medium">
                   Calendar Connected - Ask about your schedule!
                 </span>
               </div>
@@ -310,8 +310,8 @@ export default function ChatInterface({ chatId }: ChatInterfaceProps) {
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
             {isMessagesLoading && currentSessionId ? (
               <div className="flex justify-center items-center h-32">
-                <div className="flex items-center space-x-2 text-[hsl(216,30%,53%)]">
-                  <div className="w-4 h-4 border-2 border-[hsl(216,30%,53%)] border-t-transparent rounded-full animate-spin"></div>
+                <div className="flex items-center space-x-2 text-muted-foreground">
+                  <div className="w-4 h-4 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
                   <span>Loading chat history...</span>
                 </div>
               </div>
@@ -326,10 +326,10 @@ export default function ChatInterface({ chatId }: ChatInterfaceProps) {
                   <div
                     className={`inline-flex max-w-[90%] p-3 sm:p-4 rounded-2xl shadow-sm wrap-break-word ${
                       msg.role === "user"
-                        ? "bg-[hsl(218,28%,53%)] text-white"
+                        ? "bg-secondary text-secondary-foreground"
                         : msg.role === "assistant"
-                        ? "bg-[hsl(47,71%,90%)] text-[hsl(218,28%,53%)]"
-                        : "bg-yellow-50 text-yellow-800 text-center text-sm italic"
+                        ? "bg-accent text-accent-foreground"
+                        : "bg-muted text-muted-foreground text-center text-sm italic"
                     }`}
                   >
                     <InteractiveMessage

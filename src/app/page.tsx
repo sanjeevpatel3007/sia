@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import Navbar from '@/components/navbar'
 import { useEffect, useState, useRef } from 'react'
 export default function Home() {
-  const { user, signInWithGooglePopup } = useAuth()
+  const { user, signInWithGoogle } = useAuth()
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null)
   const hasProcessedUrl = useRef(false)
 
@@ -45,8 +45,8 @@ export default function Home() {
       // User is authenticated, redirect to chat
       window.location.href = '/chat'
     } else {
-      // User not authenticated, trigger Google OAuth popup
-      signInWithGooglePopup()
+      // User not authenticated, trigger Google OAuth redirect
+      signInWithGoogle()
     }
   }
 

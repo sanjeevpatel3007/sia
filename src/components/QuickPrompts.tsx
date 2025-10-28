@@ -1,5 +1,7 @@
 'use client';
 
+import { Badge } from '@/components/ui/badge';
+
 interface QuickPromptsProps {
   hasCalendarPermission: boolean;
   onPromptClick: (prompt: string) => void;
@@ -15,15 +17,7 @@ export default function QuickPrompts({ hasCalendarPermission, onPromptClick }: Q
     "What are some stress relief techniques?",
     "Help me with meditation guidance",
     "How can I improve my sleep?",
-    "What meetings do I have today?",
-    "How busy is my schedule this week?",
-    "Suggest breaks between my meetings",
-    "Help me plan around my calendar",
-    "What are some stress relief techniques?",
-    "Help me with meditation guidance",
-    "How can I improve my sleep?",
-    "What meetings do I have today?",
-    
+
     // Calendar prompts (only show if calendar is connected)
     ...(hasCalendarPermission ? [
       "What's my schedule like today?",
@@ -36,17 +30,18 @@ export default function QuickPrompts({ hasCalendarPermission, onPromptClick }: Q
   ];
 
   return (
-    <div className="p-4 border-b border-gray-100">
-      <p className="text-sm sama-text-secondary mb-3 font-medium">Quick start:</p>
+    <div className="p-4 border-b border-border">
+      <p className="text-sm text-muted-foreground mb-3 font-medium">Quick start:</p>
       <div className="flex flex-wrap gap-2">
         {allPrompts.map((prompt, index) => (
-          <button
+          <Badge
             key={index}
+            variant="secondary"
             onClick={() => onPromptClick(prompt)}
-            className="px-3 py-1 sama-bg-accent sama-text-primary rounded-full text-xs hover:sama-bg-accent-light transition-colors font-medium"
+            className="px-3 py-1 rounded-full text-xs cursor-pointer hover:bg-accent transition-colors font-medium"
           >
             {prompt}
-          </button>
+          </Badge>
         ))}
       </div>
     </div>

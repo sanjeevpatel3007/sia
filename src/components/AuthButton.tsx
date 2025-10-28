@@ -1,13 +1,16 @@
 'use client'
 
 import { useAuth } from '@/contexts/AuthContext'
+import { Button } from '@/components/ui/button'
+import { Loader2 } from 'lucide-react'
+
 export default function AuthButton() {
-  const { user, loading, signInWithGooglePopup, signOut } = useAuth()
+  const { user, loading, signInWithGoogle, signOut } = useAuth()
 
   if (loading) {
     return (
       <div className="flex items-center justify-center p-4">
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
       </div>
     )
   }
@@ -16,30 +19,31 @@ export default function AuthButton() {
     return (
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-700">
+          <span className="text-sm text-foreground">
             {user.user_metadata?.full_name || user.email}
           </span>
-          <span className="text-sm text-gray-700">
+          <span className="text-sm text-muted-foreground">
             {user.user_metadata?.email || user.email}
           </span>
         </div>
-        <button
+        <Button
+          variant="destructive"
           onClick={async () => {
             await signOut();
             window.location.href = '/';
           }}
-          className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md transition-colors"
         >
           Sign Out
-        </button>
+        </Button>
       </div>
     )
   }
 
   return (
-    <button
-      onClick={signInWithGooglePopup}
-      className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md transition-colors flex items-center gap-2"
+    <Button
+      variant="secondary"
+      size="lg"
+      onClick={signInWithGoogle}
     >
       <svg className="w-5 h-5" viewBox="0 0 24 24">
         <path
