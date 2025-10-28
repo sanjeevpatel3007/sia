@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useChat as useVercelChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
 import { useAuth } from "@/contexts/AuthContext";
-import { useChat } from "@/contexts/ChatContext";
+import { useChat as useChatContext } from "@/contexts/ChatContext";
 import ChatInput from "./ChatInput";
 import QuickPrompts from "./QuickPrompts";
 import Sidebar from "./sidebar";
@@ -25,29 +27,43 @@ export default function ChatInterface({ chatId }: ChatInterfaceProps) {
     currentSessionId,
     currentMessages,
     isMessagesLoading,
-    addMessageToCurrentSession,
     switchToSession,
-    createNewSession,
     setCurrentSessionId,
     setCurrentMessages,
-  } = useChat();
+    refreshSessions,
+  } = useChatContext();
+
   const [input, setInput] = useState("");
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [localMessages, setLocalMessages] = useState<
-    Array<{ role: "user" | "assistant"; content: string }>
-  >([]);
-  const [questionType, setQuestionType] = useState<
-    "calendar" | "wellness" | "general" | "planning"
-  >("general");
+  const [hasLoadedHistory, setHasLoadedHistory] = useState(false);
+
+  // Initialize Vercel AI SDK's useChat hook
+  const {
+    messages,
+    sendMessage: sendVercelMessage,
+    status,
+    setMessages,
+  } = useVercelChat({
+    transport: new DefaultChatTransport({
+      api: "/api/chat",
+    }),
+    onFinish: async () => {
+      // Refresh sessions to update sidebar
+      await refreshSessions();
+      console.log("Chat response finished and sessions refreshed");
+    },
+  });
 
   // Switch to the correct session when chatId changes
   useEffect(() => {
     if (chatId && chatId !== currentSessionId) {
       switchToSession(chatId);
+      setHasLoadedHistory(false); // Reset flag when switching sessions
     } else if (!chatId && currentSessionId) {
       // If we're on /chat route (no chatId) but have a current session, clear it
       setCurrentSessionId(null);
       setCurrentMessages([]);
+      setMessages([]); // Clear AI SDK messages too
+      setHasLoadedHistory(false);
     }
   }, [
     chatId,
@@ -55,190 +71,90 @@ export default function ChatInterface({ chatId }: ChatInterfaceProps) {
     switchToSession,
     setCurrentSessionId,
     setCurrentMessages,
+    setMessages,
   ]);
 
-  // Load messages from database when session changes
+  // Load messages from database ONLY when switching sessions or on initial load
+  // Don't reload during active chat to prevent overwriting optimistic updates
   useEffect(() => {
-    if (currentMessages.length > 0) {
-      setLocalMessages(
-        currentMessages.map((msg) => ({ role: msg.role, content: msg.content }))
-      );
+    // Skip if already loaded or currently loading
+
+    if (currentSessionId) {
+      // Loading an existing session with history
+      if (currentMessages.length > 0) {
+        // Convert database messages to AI SDK format
+        const aiMessages = currentMessages.map((msg) => ({
+          id: msg.id || `${msg.role}-${Date.now()}`,
+          role: msg.role,
+          parts: [{ type: "text" as const, text: msg.content }],
+        }));
+        console.log({ aiMessages });
+        setMessages(aiMessages);
+        setHasLoadedHistory(true);
+      } else if (!isMessagesLoading) {
+        // Session exists but no messages yet - show welcome
+        const welcomeMessage = hasCalendarPermission
+          ? "Namaste! I'm SIA. I help your wellness and balance using your calendar."
+          : "Namaste! I'm SIA. I help your wellness and daily balance.";
+
+        setMessages([
+          {
+            id: "welcome",
+            role: "assistant" as const,
+            parts: [{ type: "text" as const, text: welcomeMessage }],
+          },
+        ]);
+        setHasLoadedHistory(true);
+      }
     } else {
-      // Show welcome message for new/empty sessions
+      // No session - show welcome message for new chat
       const welcomeMessage = hasCalendarPermission
         ? "Namaste! I'm SIA. I help your wellness and balance using your calendar."
         : "Namaste! I'm SIA. I help your wellness and daily balance.";
 
-      setLocalMessages([
-        { role: "assistant" as const, content: welcomeMessage },
+      setMessages([
+        {
+          id: "welcome",
+          role: "assistant" as const,
+          parts: [{ type: "text" as const, text: welcomeMessage }],
+        },
       ]);
+      setHasLoadedHistory(true);
     }
-  }, [currentMessages, hasCalendarPermission]);
-
-  // Get messages to display (use local state for immediate updates)
-  const messagesToDisplay = localMessages;
+  }, [
+    currentSessionId,
+    currentMessages,
+    hasCalendarPermission,
+    setMessages,
+    hasLoadedHistory,
+    isMessagesLoading,
+  ]);
 
   const sendMessage = async () => {
     if (!input.trim() || !session?.user?.id) return;
 
-    const userMessage = { role: "user" as const, content: input };
     const userInput = input;
     setInput("");
 
-    // Determine question type for loading steps
-    const calendarKeywords = [
-      "meeting",
-      "calendar",
-      "schedule",
-      "appointment",
-      "event",
-      "today",
-      "tomorrow",
-      "this week",
-      "upcoming",
-      "meet",
-      "monday",
-      "tuesday",
-      "wednesday",
-      "thursday",
-      "friday",
-      "saturday",
-      "sunday",
-      "next",
-      "available",
-      "busy",
-      "free",
-    ];
-    const wellnessKeywords = [
-      "wellness",
-      "mindful",
-      "stress",
-      "meditation",
-      "breathing",
-      "relax",
-      "calm",
-      "anxiety",
-      "mental health",
-      "self-care",
-    ];
-    const planningKeywords = [
-      "plan",
-      "organize",
-      "structure",
-      "arrange",
-      "prepare",
-      "schedule",
-    ];
+    // Use chatId (from URL) as the session ID
+    // Backend will create session if it doesn't exist yet
+    const sessionIdToUse = chatId || currentSessionId;
 
-    let detectedType: "calendar" | "wellness" | "general" | "planning" =
-      "general";
-
-    if (
-      calendarKeywords.some((keyword) =>
-        userInput.toLowerCase().includes(keyword)
-      ) &&
-      hasCalendarPermission
-    ) {
-      detectedType = "calendar";
-    } else if (
-      wellnessKeywords.some((keyword) =>
-        userInput.toLowerCase().includes(keyword)
-      )
-    ) {
-      detectedType = "wellness";
-    } else if (
-      planningKeywords.some((keyword) =>
-        userInput.toLowerCase().includes(keyword)
-      )
-    ) {
-      detectedType = "planning";
+    // If this is a new chat, mark history as loaded to prevent DB overwrites
+    if (!currentSessionId && chatId) {
+      setHasLoadedHistory(true);
     }
 
-    setQuestionType(detectedType);
-
-    // Add user message to local state immediately for instant display
-    setLocalMessages((prev) => [...prev, userMessage]);
-
-    let sessionIdToUse: string;
-
-    // If no current session, create one first
-    if (!currentSessionId) {
-      sessionIdToUse = await createNewSession();
-      // Update URL to include the new session ID (but don't refresh the page)
-      window.history.pushState(null, "", `/chat/${sessionIdToUse}`);
-    } else {
-      sessionIdToUse = currentSessionId;
-    }
-
-    // Add user message to database in background
-    addMessageToCurrentSession("user", userInput, sessionIdToUse).catch(
-      console.error
-    );
-
-    // Set loading states immediately
-    setIsStreaming(true);
-
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: [...messagesToDisplay, userMessage],
+    // Use Vercel AI SDK's sendMessage with custom body data
+    await sendVercelMessage(
+      { text: userInput },
+      {
+        body: {
           session: session,
           sessionId: sessionIdToUse,
-        }),
-      });
-
-      if (!res.body) throw new Error("No response body");
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let assistantText = "";
-
-      // Add empty assistant message to local state for streaming
-      const assistantMessage = { role: "assistant" as const, content: "" };
-      setLocalMessages((prev) => [...prev, assistantMessage]);
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        assistantText += decoder.decode(value);
-
-        // Update the assistant message in local state for real-time display
-        setLocalMessages((prev) =>
-          prev.map((msg, index) =>
-            index === prev.length - 1 && msg.role === "assistant"
-              ? { ...msg, content: assistantText }
-              : msg
-          )
-        );
+        },
       }
-
-      // Add assistant response to database in background
-      addMessageToCurrentSession(
-        "assistant",
-        assistantText,
-        sessionIdToUse
-      ).catch(console.error);
-    } catch (err) {
-      console.error("Chat error:", err);
-      const errorMessage = "Sorry, something went wrong. Please try again.";
-
-      // Add error message to local state
-      setLocalMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: errorMessage },
-      ]);
-
-      // Add error message to database in background
-      addMessageToCurrentSession(
-        "assistant",
-        errorMessage,
-        sessionIdToUse
-      ).catch(console.error);
-    } finally {
-      setIsStreaming(false);
-    }
+    );
   };
 
   const handleQuickPrompt = (prompt: string) => {
@@ -292,7 +208,7 @@ export default function ChatInterface({ chatId }: ChatInterfaceProps) {
           )}
 
           {/* Quick Prompts */}
-          {messagesToDisplay.length <= 1 && (
+          {messages.length <= 1 && (
             <QuickPrompts
               hasCalendarPermission={hasCalendarPermission}
               onPromptClick={handleQuickPrompt}
@@ -300,7 +216,7 @@ export default function ChatInterface({ chatId }: ChatInterfaceProps) {
           )}
 
           {/* Messages Container with Conversation Component */}
-          <Conversation className="flex-1 max-w-5xl mx-auto">
+          <Conversation className="flex-1 w-full max-w-5xl mx-auto">
             <ConversationContent className="space-y-4">
               {isMessagesLoading && currentSessionId ? (
                 <div className="flex justify-center items-center h-32">
@@ -311,34 +227,132 @@ export default function ChatInterface({ chatId }: ChatInterfaceProps) {
                 </div>
               ) : (
                 <>
-                  {messagesToDisplay.map((msg, idx) => (
-                    <div
-                      key={idx}
-                      className={`flex ${
-                        msg.role === "user" ? "justify-end" : "justify-start"
-                      }`}
-                    >
+                  {messages.map((msg: any, idx: number) => {
+                    return (
                       <div
-                        className={`inline-flex max-w-[90%] p-3 sm:p-4 rounded-2xl shadow-sm wrap-break-word ${
-                          msg.role === "user"
-                            ? "bg-secondary text-secondary-foreground"
-                            : msg.role === "assistant"
-                            ? "bg-accent text-accent-foreground"
-                            : "bg-muted text-muted-foreground text-center text-sm italic"
-                        }`}
+                        key={msg.id || idx}
+                        className={`flex ${
+                          msg.role === "user" ? "justify-end" : "justify-start"
+                        } flex-col gap-2`}
                       >
-                        <MessageContent
-                          content={msg.content}
-                          hasCalendarPermission={hasCalendarPermission}
-                          onRequestCalendarPermission={
-                            requestCalendarPermission
+                        {msg.parts.map((part: any, partIdx: number) => {
+                          // Render text parts
+                          if (part.type === "text") {
+                            return (
+                              <div
+                                key={partIdx}
+                                className={`inline-flex max-w-[90%] p-3 sm:p-4 rounded-2xl shadow-sm wrap-break-word ${
+                                  msg.role === "user"
+                                    ? "bg-secondary text-secondary-foreground ml-auto"
+                                    : "bg-accent text-accent-foreground"
+                                }`}
+                              >
+                                <MessageContent
+                                  content={part.text}
+                                  hasCalendarPermission={hasCalendarPermission}
+                                  onRequestCalendarPermission={
+                                    requestCalendarPermission
+                                  }
+                                />
+                              </div>
+                            );
                           }
-                        />
-                      </div>
-                    </div>
-                  ))}
 
-                  {isStreaming && <LoadingSteps />}
+                          // Render calendar tool invocations
+                          if (
+                            part.type.startsWith("tool-") &&
+                            "state" in part
+                          ) {
+                            const toolName = part.type.replace("tool-", "");
+                            const toolPart = part as any; // Type assertion for tool parts
+
+                            return (
+                              <div
+                                key={partIdx}
+                                className="max-w-[90%] p-3 sm:p-4 rounded-lg border border-border bg-muted/50"
+                              >
+                                {toolPart.state === "input-streaming" && (
+                                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                                    <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
+                                    <span>Preparing to access calendar...</span>
+                                  </div>
+                                )}
+
+                                {toolPart.state === "input-available" && (
+                                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                                    <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
+                                    <span>
+                                      {toolName === "getTodayEvents" &&
+                                        "Fetching today's schedule..."}
+                                      {toolName === "getUpcomingEvents" &&
+                                        "Fetching upcoming events..."}
+                                      {toolName === "searchCalendarEvents" &&
+                                        `Searching calendar for "${toolPart.input?.query}"...`}
+                                      {toolName === "getEventsInRange" &&
+                                        "Fetching events in date range..."}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {toolPart.state === "output-available" && (
+                                  <div className="space-y-2">
+                                    <div className="flex items-center gap-2 text-primary text-sm font-medium">
+                                      <svg
+                                        className="w-4 h-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth={2}
+                                          d="M5 13l4 4L19 7"
+                                        />
+                                      </svg>
+                                      <span>Calendar data retrieved</span>
+                                    </div>
+                                    {toolPart.output?.events?.length > 0 && (
+                                      <div className="text-xs text-muted-foreground">
+                                        Found {toolPart.output.events.length}{" "}
+                                        event
+                                        {toolPart.output.events.length > 1
+                                          ? "s"
+                                          : ""}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {toolPart.state === "output-error" && (
+                                  <div className="flex items-center gap-2 text-destructive text-sm">
+                                    <svg
+                                      className="w-4 h-4"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M6 18L18 6M6 6l12 12"
+                                      />
+                                    </svg>
+                                    <span>Failed to access calendar</span>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          return null;
+                        })}
+                      </div>
+                    );
+                  })}
+
+                  {status === "submitted" && <LoadingSteps />}
                   <div className="pb-24" />
                 </>
               )}
@@ -353,7 +367,7 @@ export default function ChatInterface({ chatId }: ChatInterfaceProps) {
             input={input}
             setInput={setInput}
             onSendMessage={sendMessage}
-            isStreaming={isStreaming}
+            isStreaming={status === "streaming"}
             hasCalendarPermission={hasCalendarPermission}
             onRequestCalendarPermission={requestCalendarPermission}
           />

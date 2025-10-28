@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import type { UIMessage } from 'ai';
 
 export interface ChatMessage {
   id?: string;
@@ -8,6 +9,33 @@ export interface ChatMessage {
   content: string;
   created_at?: string;
   metadata?: Record<string, unknown>;
+}
+
+// Utility functions for converting between database and AI SDK formats
+export function convertDbMessageToUIMessage(dbMessage: ChatMessage): UIMessage {
+  return {
+    id: dbMessage.id || `${dbMessage.role}-${Date.now()}`,
+    role: dbMessage.role,
+    parts: [{ type: 'text' as const, text: dbMessage.content }],
+  };
+}
+
+export function convertUIMessageToDbMessage(
+  uiMessage: UIMessage,
+  userId: string,
+  sessionId: string
+): Omit<ChatMessage, 'id' | 'created_at'> {
+  const content = uiMessage.parts
+    .filter(part => part.type === 'text')
+    .map(part => part.text)
+    .join(' ');
+
+  return {
+    user_id: userId,
+    session_id: sessionId,
+    role: uiMessage.role as 'user' | 'assistant',
+    content,
+  };
 }
 
 export interface ChatSession {

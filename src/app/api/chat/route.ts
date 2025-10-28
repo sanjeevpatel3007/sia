@@ -1,116 +1,84 @@
-import { geminiModel } from '@/lib/google-ai';
-import { streamText } from 'ai';
-import { googleCalendarService, testCalendarAccess } from '@/lib/google-calendar';
-import { searchUserMemories, addIntelligentMemories, formatMemoriesForContext } from '@/lib/mem0';
-import { 
-  
-  generateSessionId
-} from '@/lib/database';
+import { geminiModel } from "@/lib/google-ai";
+import {
+  streamText,
+  convertToModelMessages,
+  UIMessage,
+  createIdGenerator,
+  stepCountIs,
+} from "ai";
+import { googleCalendarService } from "@/lib/google-calendar";
+import {
+  searchUserMemories,
+  addIntelligentMemories,
+  formatMemoriesForContext,
+} from "@/lib/mem0";
+import { generateSessionId, addMessageToSession } from "@/lib/database";
+import { supabase } from "@/lib/supabase";
+import { calendarTools } from "@/lib/calendar-tools";
 
 export async function POST(req: Request) {
-  const { messages, session, sessionId } = await req.json();
+  const {
+    messages,
+    session,
+    sessionId,
+  }: { messages: UIMessage[]; session: any; sessionId?: string } =
+    await req.json();
 
-  let calendarContext = '';
-  let memoryContext = '';
+  let memoryContext = "";
   let userId: string | null = null;
-  const currentSessionId = sessionId || generateSessionId();
+
+  // Generate or use existing session ID
+  let currentSessionId = sessionId;
+
+  // If no session ID provided, this is a new conversation - generate one
+  if (!currentSessionId) {
+    currentSessionId = generateSessionId();
+  }
+
+  // Check if user has calendar permissions
+  const hasCalendarAccess =
+    session?.user?.user_metadata?.calendar_permission_granted ||
+    session?.provider_token;
+
+  // Helper function to extract text from UIMessage
+  const getMessageText = (message: UIMessage): string => {
+    return message.parts
+      .filter((part) => part.type === "text")
+      .map((part) => part.text)
+      .join(" ");
+  };
 
   // Get user ID and load memories
   try {
     if (session?.user?.id) {
       userId = session.user.id;
-      
+
       // Search for relevant memories from Mem0
-      const lastMessage = messages[messages.length - 1]?.content || '';
+      const lastMessage = getMessageText(messages[messages.length - 1]) || "";
       if (userId) {
         const memories = await searchUserMemories(userId, lastMessage);
         memoryContext = formatMemoriesForContext(memories);
-        
-        console.log('Found memories for user:', memories.length);
+
+        console.log("Found memories for user:", memories.length);
       }
     }
   } catch (error) {
-    console.error('Error retrieving memories:', error);
+    console.error("Error retrieving memories:", error);
     // Continue without context if there's an error
   }
-  
-  // Check if user has calendar permissions and if the message is about calendar
-  console.log('Session data:', session?.user?.user_metadata);
-  console.log('Calendar permission granted:', session?.user?.user_metadata?.calendar_permission_granted);
-  
-  // Also check if we have a provider token (alternative way to detect calendar access)
-  const hasCalendarAccess = session?.user?.user_metadata?.calendar_permission_granted || session?.provider_token;
-  
-  if (hasCalendarAccess) {
-    const lastMessage = messages[messages.length - 1]?.content || '';
-    const calendarKeywords = ['meeting', 'calendar', 'schedule', 'appointment', 'event', 'today', 'tomorrow', 'this week', 'upcoming', 'meet', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday', 'next', 'available', 'busy', 'free'];
-    
-    const isCalendarRelated = calendarKeywords.some(keyword => 
-      lastMessage.toLowerCase().includes(keyword)
-    );
-    
-    console.log('Last message:', lastMessage);
-    console.log('Is calendar related:', isCalendarRelated);
 
-    if (isCalendarRelated) {
-      try {
-        console.log('Attempting to fetch calendar data...');
-        
-        // First test if we can access calendar at all
-        const hasAccess = await testCalendarAccess(session);
-        if (!hasAccess) {
-          throw new Error('Calendar access test failed');
-        }
-        
-        // Set session in calendar service
-        googleCalendarService.setSession(session);
-        
-        // Get today's events
-        const todayEvents = await googleCalendarService.getTodayEvents();
-        console.log('Today events:', todayEvents.length);
-        
-        // Get upcoming events for the next 7 days
-        const upcomingEvents = await googleCalendarService.getUpcomingEvents();
-        console.log('Upcoming events:', upcomingEvents.length);
-        
-        calendarContext = `\n\nCALENDAR CONTEXT:
-Today's events: ${todayEvents.length > 0 ? todayEvents.map(event => 
-          `- ${event.summary} (${event.start.dateTime ? new Date(event.start.dateTime).toLocaleTimeString() : 'All day'})`
-        ).join('\n') : 'No events scheduled for today.'}
+  // Configure tools based on calendar access
+  const hasCalendarTools = hasCalendarAccess;
 
-Upcoming events (next 7 days): ${upcomingEvents.length > 0 ? upcomingEvents.slice(0, 5).map(event => 
-          `- ${event.summary} (${event.start.dateTime ? new Date(event.start.dateTime).toLocaleDateString() + ' ' + new Date(event.start.dateTime).toLocaleTimeString() : event.start.date ? new Date(event.start.date).toLocaleDateString() : 'All day'})`
-        ).join('\n') : 'No upcoming events.'}
-
-Use this calendar information to help the user with their schedule, suggest wellness breaks between meetings, or help them plan their day mindfully.`;
-      } catch (error) {
-        console.error('Error fetching calendar data:', error);
-        
-        // Provide more specific error messages based on the error type
-        let errorMessage = '';
-        if (error instanceof Error) {
-          if (error.message.includes('insufficient authentication scopes')) {
-            errorMessage = 'I notice your calendar permissions may need to be refreshed. Please click the calendar button to reconnect your Google Calendar for the best experience.';
-          } else if (error.message.includes('access token')) {
-            errorMessage = 'I\'m having trouble accessing your calendar right now. Please try clicking the calendar button to refresh your connection.';
-          } else if (error.message.includes('Calendar access test failed')) {
-            errorMessage = 'I can see you have calendar access, but I\'m having trouble fetching your calendar data right now. Please try reconnecting your calendar using the calendar button.';
-          } else {
-            errorMessage = 'I\'m experiencing some technical difficulties accessing your calendar. You can still tell me about your schedule and I\'ll help you plan wellness activities around it.';
-          }
-        } else {
-          errorMessage = 'I\'m having trouble accessing your calendar right now. You can still tell me about your schedule and I\'ll help you plan wellness activities around it.';
-        }
-        
-        calendarContext = `\n\nCALENDAR NOTE: ${errorMessage}`;
-      }
-    }
+  // Set session for calendar service if user has access
+  if (hasCalendarTools) {
+    googleCalendarService.setSession(session);
   }
 
-  const result = await streamText({
+  const result = streamText({
     model: geminiModel,
-    messages,
-    system: `You are SIA, a gentle and supportive AI wellness companion. Your role is to guide users toward balance, calm, and wellness with patience and encouragement. 
+    messages: convertToModelMessages(messages),
+    system: `You are SIA, a gentle and supportive AI wellness companion. Your role is to guide users toward balance, calm, and wellness with patience and encouragement.
 
 Key characteristics:
 - Always be warm, empathetic, and non-judgmental
@@ -123,15 +91,82 @@ Key characteristics:
 - When discussing calendar or schedule, help users find balance and wellness in their busy lives
 - Suggest mindful breaks, breathing exercises, or stress relief techniques between meetings
 - Help users plan their day with wellness in mind
-- If calendar access is unavailable, gracefully guide users to reconnect their calendar or work with them to plan wellness activities based on what they tell you about their schedule
 
-IMPORTANT: When users ask calendar-related questions but don't have calendar access, include [CALENDAR_BUTTON] in your response to show a connect calendar button.
+${
+  hasCalendarTools
+    ? `CALENDAR TOOLS AVAILABLE:
+You have access to the user's Google Calendar through these tools:
+- getTodayEvents: Get today's schedule
+- getUpcomingEvents: Get upcoming events (specify days parameter)
+- searchCalendarEvents: Search for specific events by keyword
+- getEventsInRange: Get events in a date range
 
-Remember: You're here to support their wellness journey, not to replace professional medical advice.${calendarContext}${memoryContext}`,
-    onFinish: async () => {
-      // Note: Messages are now saved via individual message storage in the frontend
-      console.log('Response generated, will be saved via frontend message storage');
-    }
+Use these tools AUTOMATICALLY when users ask about their schedule, meetings, or calendar. Don't ask for permission - just use them to provide accurate, personalized wellness advice based on their actual schedule.
+
+After getting calendar data, help them find wellness opportunities like breaks between meetings, suggest meditation times, or recommend stress-relief activities around their busy schedule.`
+    : `CALENDAR NOT CONNECTED:
+When users ask calendar-related questions, include [CALENDAR_BUTTON] in your response to show a connect calendar button. Gracefully guide users to connect their calendar for personalized wellness planning.`
+}
+
+Remember: You're here to support their wellness journey, not to replace professional medical advice.${memoryContext}`,
+    // Only include tools if user has calendar access
+    ...(hasCalendarTools && {
+      tools: calendarTools,
+    }),
+    stopWhen: stepCountIs(7),
+    onFinish: async ({ text }) => {
+      // Save messages to database (both user and assistant)
+      if (userId && currentSessionId) {
+        try {
+          // Check if this is the first message in a new session
+          const { data: existingSession } = await supabase
+            .from("chat_sessions")
+            .select("id")
+            .eq("id", currentSessionId)
+            .single();
+
+          // Create session if it doesn't exist
+          if (!existingSession) {
+            const firstUserMessage = getMessageText(
+              messages[messages.length - 1]
+            );
+            await supabase.from("chat_sessions").insert([
+              {
+                id: currentSessionId,
+                user_id: userId,
+                title:
+                  firstUserMessage.length > 50
+                    ? firstUserMessage.substring(0, 50) + "..."
+                    : firstUserMessage,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              },
+            ]);
+          }
+
+          // Save the user message (last message in the array)
+          const userMessage = getMessageText(messages[messages.length - 1]);
+          await addMessageToSession(
+            currentSessionId,
+            userId,
+            "user",
+            userMessage
+          );
+
+          // Save the assistant response
+          await addMessageToSession(
+            currentSessionId,
+            userId,
+            "assistant",
+            text
+          );
+
+          console.log("Messages saved to database");
+        } catch (error) {
+          console.error("Error saving messages to database:", error);
+        }
+      }
+    },
   });
 
   // Save to Mem0 for intelligent memory extraction
@@ -140,19 +175,34 @@ Remember: You're here to support their wellness journey, not to replace professi
       // SAVE TO MEM0 (Intelligent Memory Extraction)
       // This will extract only relevant facts from the conversation
       // From 25 messages, it will store only 8-10 important memories
-      const conversationForMemory = messages.slice(-5); // Last 5 messages for context
-      addIntelligentMemories(userId, conversationForMemory).catch(error => {
-        console.error('Error saving intelligent memories:', error);
+      // Convert UIMessages to simple format for Mem0
+      const conversationForMemory = messages
+        .slice(-5)
+        .filter((msg) => msg.role === "user" || msg.role === "assistant")
+        .map((msg) => ({
+          role: msg.role as "user" | "assistant",
+          content: getMessageText(msg),
+        }));
+      addIntelligentMemories(userId, conversationForMemory).catch((error) => {
+        console.error("Error saving intelligent memories:", error);
       });
 
-      console.log('Extracted memories to Mem0');
+      console.log("Extracted memories to Mem0");
     } catch (error) {
-      console.error('Error saving to Mem0:', error);
+      console.error("Error saving to Mem0:", error);
     }
   }
 
-  // Return response with session ID for frontend
-  const response = result.toTextStreamResponse();
-  response.headers.set('X-Session-ID', currentSessionId);
+  // Return UIMessage stream response with session ID and custom ID generator
+  const response = result.toUIMessageStreamResponse({
+    generateMessageId: createIdGenerator({
+      prefix: "msg",
+      size: 16,
+    }),
+    headers: {
+      "X-Session-ID": currentSessionId,
+    },
+  });
+
   return response;
 }

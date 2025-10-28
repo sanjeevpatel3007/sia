@@ -2,11 +2,9 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
-import { supabase } from '@/lib/supabase';
-import { 
+import {
   getUserSessions,
   getSessionMessages,
-  addMessage,
   updateTitle,
   deleteSession as deleteSessionAction
 } from '@/actions/chat-history.actions';
@@ -42,7 +40,6 @@ interface ChatContextType {
   updateSession: (sessionId: string, title: string) => Promise<void>;
   deleteSession: (sessionId: string) => Promise<void>;
   refreshSessions: () => Promise<void>;
-  addMessageToCurrentSession: (role: 'user' | 'assistant', content: string, sessionId?: string) => Promise<void>;
   setCurrentSessionId: (sessionId: string | null) => void;
   setCurrentMessages: (messages: ChatMessage[]) => void;
 }
@@ -162,58 +159,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const addMessageToCurrentSession = async (role: 'user' | 'assistant', content: string, sessionId?: string) => {
-    const targetSessionId = sessionId || currentSessionId;
-    if (!targetSessionId || !session?.user?.id) return;
-    
-    try {
-      // Check if this is the first message in a new session
-      const isFirstMessage = currentMessages.length === 0;
-      
-      if (isFirstMessage && role === 'user') {
-        // Create session with first user message as title
-        const { data, error } = await supabase
-          .from('chat_sessions')
-          .insert([{
-            id: targetSessionId,
-            user_id: session.user.id,
-            title: content.length > 50 ? content.substring(0, 50) + '...' : content,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }])
-          .select()
-          .single();
-
-        if (error) throw error;
-        
-        // Add session to local state
-        const newSession: ChatSession = {
-          id: targetSessionId,
-          user_id: session.user.id,
-          title: data.title,
-          created_at: data.created_at,
-          updated_at: data.updated_at,
-          message_count: 0,
-          last_message: ''
-        };
-        
-        setSessions(prev => [newSession, ...prev]);
-      }
-      
-      // Add message to database
-      const message = await addMessage(targetSessionId, session.user.id, role, content);
-      setCurrentMessages(prev => [...prev, message]);
-      
-      // Only refresh sessions after assistant response to avoid interrupting the flow
-      if (role === 'assistant') {
-        await refreshSessions(); // Refresh to update message count and last message
-      }
-    } catch (error) {
-      console.error('Error adding message:', error);
-      throw error;
-    }
-  };
-
   return (
     <ChatContext.Provider value={{
       sessions,
@@ -226,7 +171,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       updateSession,
       deleteSession,
       refreshSessions,
-      addMessageToCurrentSession,
       setCurrentSessionId,
       setCurrentMessages
     }}>
