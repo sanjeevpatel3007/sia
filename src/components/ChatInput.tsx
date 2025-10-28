@@ -1,9 +1,20 @@
-'use client';
+"use client";
 
-import { Calendar, Send } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Calendar } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
+import {
+  PromptInput,
+  PromptInputTextarea,
+  PromptInputFooter,
+  PromptInputSubmit,
+  PromptInputTools,
+  PromptInputButton,
+} from "@/components/ai-elements/prompt-input";
 
 interface ChatInputProps {
   input: string;
@@ -11,7 +22,6 @@ interface ChatInputProps {
   onSendMessage: () => void;
   isStreaming: boolean;
   hasCalendarPermission: boolean;
-  onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onRequestCalendarPermission?: () => void;
 }
 
@@ -21,58 +31,58 @@ export default function ChatInput({
   onSendMessage,
   isStreaming,
   hasCalendarPermission,
-  onKeyDown,
-  onRequestCalendarPermission
+  onRequestCalendarPermission,
 }: ChatInputProps) {
+  const handleSubmit = (message: { text?: string }) => {
+    if (message.text && message.text.trim()) {
+      onSendMessage();
+    }
+  };
+
   return (
-    <div className="bg-background border-t border-border shadow-lg px-0 md:px-10">
-      <div className="px-4 py-3 sm:py-4">
-        <div className="flex gap-2 sm:gap-3">
-          {/* Calendar status indicator */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant={hasCalendarPermission ? "secondary" : "outline"}
-                size="icon"
-                onClick={hasCalendarPermission ? undefined : onRequestCalendarPermission}
-                disabled={isStreaming}
-                className="shrink-0"
-              >
-                <Calendar className="w-5 h-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {hasCalendarPermission
-                ? "Calendar Connected - Ask about your schedule!"
-                : "Connect Google Calendar to get personalized wellness guidance based on your schedule"
-              }
-            </TooltipContent>
-          </Tooltip>
+    <div className="absolute bottom-0 w-full left-0 z-50 pb-2">
+      <PromptInput
+        onSubmit={handleSubmit}
+        className="max-w-4xl mx-auto bg-background overflow-hidden rounded-2xl border border-border shadow-lg"
+      >
+        <PromptInputTextarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Type your message to SIA..."
+          disabled={isStreaming}
+          className="resize-none"
+        />
+        <PromptInputFooter>
+          <PromptInputTools>
+            {/* Calendar status indicator */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <PromptInputButton
+                  variant={hasCalendarPermission ? "secondary" : "ghost"}
+                  onClick={
+                    hasCalendarPermission
+                      ? undefined
+                      : onRequestCalendarPermission
+                  }
+                  disabled={isStreaming}
+                >
+                  <Calendar className="w-4 h-4" />
+                </PromptInputButton>
+              </TooltipTrigger>
+              <TooltipContent>
+                {hasCalendarPermission
+                  ? "Calendar Connected - Ask about your schedule!"
+                  : "Connect Google Calendar to get personalized wellness guidance"}
+              </TooltipContent>
+            </Tooltip>
+          </PromptInputTools>
 
-          {/* Input field */}
-          <Input
-            type="text"
-            className="flex-1 rounded-full text-sm sm:text-base"
-            placeholder="Type your message to SIA..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={onKeyDown}
-            disabled={isStreaming}
-          />
-
-          {/* Send button */}
-          <Button
-            variant="secondary"
-            size="lg"
-            onClick={onSendMessage}
+          <PromptInputSubmit
             disabled={isStreaming || !input.trim()}
-            className="rounded-full shrink-0"
-          >
-            <Send size={16} />
-            <span className="hidden sm:inline">Send</span>
-          </Button>
-        </div>
-      </div>
+            status={isStreaming ? "streaming" : undefined}
+          />
+        </PromptInputFooter>
+      </PromptInput>
     </div>
   );
 }

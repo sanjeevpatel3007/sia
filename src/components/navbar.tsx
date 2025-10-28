@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useAuth } from '@/contexts/AuthContext';
-import { useState, useRef, useEffect } from 'react';
-import { User, LogOut, LogIn, ChevronDown, Menu, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
+import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
+import { useState, useRef, useEffect } from "react";
+import { User, LogOut, LogIn, ChevronDown, Menu, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
 
 export default function Navbar() {
   const { user, loading, signInWithGoogle, signOut } = useAuth();
@@ -17,14 +17,17 @@ export default function Navbar() {
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsProfileOpen(false);
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
@@ -32,17 +35,19 @@ export default function Navbar() {
   const handleSidebarToggle = () => {
     setIsSidebarOpen(!isSidebarOpen);
     // Dispatch custom event to communicate with sidebar
-    window.dispatchEvent(new CustomEvent('sidebarToggle', { detail: !isSidebarOpen }));
+    window.dispatchEvent(
+      new CustomEvent("sidebarToggle", { detail: !isSidebarOpen })
+    );
   };
 
   const handleSignOut = async () => {
     await signOut();
-    window.location.href = '/';
+    window.location.href = "/";
   };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background shadow-sm border-b border-border">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo/Brand */}
           <div className="flex items-center">
@@ -67,7 +72,9 @@ export default function Navbar() {
                 </div>
               </div>
               <div className="hidden md:block ml-2">
-                <span className="text-secondary/90 text-sm font-medium">The Calm Mind Studio</span>
+                <span className="text-secondary/90 text-sm font-medium">
+                  The Calm Mind Studio
+                </span>
               </div>
             </Link>
           </div>
@@ -75,11 +82,17 @@ export default function Navbar() {
           {/* Navigation Links */}
           <div className="hidden md:block">
             <div className="ml-10 flex items-baseline space-x-6">
-              <Link href="/" className="text-secondary/90 hover:text-secondary px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 hover:bg-accent">
+              <Link
+                href="/"
+                className="text-secondary/90 hover:text-secondary px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 hover:bg-accent"
+              >
                 Home
               </Link>
               {user && (
-                <Link href="/chat" className="text-secondary/90 hover:text-secondary px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 hover:bg-accent">
+                <Link
+                  href="/chat"
+                  className="text-secondary/90 hover:text-secondary px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 hover:bg-accent"
+                >
                   Chat with SIA
                 </Link>
               )}
@@ -105,19 +118,21 @@ export default function Navbar() {
                 </Avatar>
                 <div className="hidden sm:block text-left">
                   <div className="text-sm font-medium text-foreground">
-                    {user.user_metadata?.full_name || 'User'}
+                    {user.user_metadata?.full_name || "User"}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {user.email}
                   </div>
                 </div>
-                <ChevronDown size={16} className={`text-muted-foreground transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown
+                  size={16}
+                  className={`text-muted-foreground transition-transform ${
+                    isProfileOpen ? "rotate-180" : ""
+                  }`}
+                />
               </Button>
             ) : (
-              <Button
-                variant="secondary"
-                onClick={signInWithGoogle}
-              >
+              <Button variant="secondary" onClick={signInWithGoogle}>
                 <LogIn size={16} />
                 <span className="hidden sm:inline">Sign in with Google</span>
                 <span className="sm:hidden">Sign in</span>
@@ -129,7 +144,7 @@ export default function Navbar() {
               <div className="absolute right-0 mt-2 w-64 bg-card rounded-lg shadow-lg border border-border py-2 z-50">
                 <div className="px-4 py-3 border-b border-border">
                   <div className="text-sm font-medium text-foreground">
-                    {user.user_metadata?.full_name || 'User'}
+                    {user.user_metadata?.full_name || "User"}
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {user.email}

@@ -1,13 +1,18 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChat } from "@/contexts/ChatContext";
 import ChatInput from "./ChatInput";
 import QuickPrompts from "./QuickPrompts";
 import Sidebar from "./sidebar";
 import LoadingSteps from "./LoadingSteps";
-import InteractiveMessage from "./InteractiveMessage";
+import MessageContent from "./MessageContent";
+import {
+  Conversation,
+  ConversationContent,
+  ConversationScrollButton,
+} from "@/components/ai-elements/conversation";
 
 interface ChatInterfaceProps {
   chatId?: string;
@@ -34,7 +39,6 @@ export default function ChatInterface({ chatId }: ChatInterfaceProps) {
   const [questionType, setQuestionType] = useState<
     "calendar" | "wellness" | "general" | "planning"
   >("general");
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Switch to the correct session when chatId changes
   useEffect(() => {
@@ -73,11 +77,6 @@ export default function ChatInterface({ chatId }: ChatInterfaceProps) {
 
   // Get messages to display (use local state for immediate updates)
   const messagesToDisplay = localMessages;
-
-  // Scroll to bottom whenever messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messagesToDisplay]);
 
   const sendMessage = async () => {
     if (!input.trim() || !session?.user?.id) return;
@@ -242,10 +241,6 @@ export default function ChatInterface({ chatId }: ChatInterfaceProps) {
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") sendMessage();
-  };
-
   const handleQuickPrompt = (prompt: string) => {
     setInput(prompt);
   };
@@ -257,7 +252,7 @@ export default function ChatInterface({ chatId }: ChatInterfaceProps) {
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden relative">
           {/* Calendar Status */}
           {hasCalendarPermission && (
             <div className="bg-accent border-b border-border p-3 flex items-center justify-between">
@@ -304,48 +299,54 @@ export default function ChatInterface({ chatId }: ChatInterfaceProps) {
             />
           )}
 
-          {/* Messages Container */}
-          {/* Messages Container */}
-          {/* Messages Container */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
-            {isMessagesLoading && currentSessionId ? (
-              <div className="flex justify-center items-center h-32">
-                <div className="flex items-center space-x-2 text-muted-foreground">
-                  <div className="w-4 h-4 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
-                  <span>Loading chat history...</span>
-                </div>
-              </div>
-            ) : (
-              messagesToDisplay.map((msg, idx) => (
-                <div
-                  key={idx}
-                  className={`flex ${
-                    msg.role === "user" ? "justify-end" : "justify-start"
-                  }`}
-                >
-                  <div
-                    className={`inline-flex max-w-[90%] p-3 sm:p-4 rounded-2xl shadow-sm wrap-break-word ${
-                      msg.role === "user"
-                        ? "bg-secondary text-secondary-foreground"
-                        : msg.role === "assistant"
-                        ? "bg-accent text-accent-foreground"
-                        : "bg-muted text-muted-foreground text-center text-sm italic"
-                    }`}
-                  >
-                    <InteractiveMessage
-                      content={msg.content}
-                      hasCalendarPermission={hasCalendarPermission}
-                      onRequestCalendarPermission={requestCalendarPermission}
-                    />
+          {/* Messages Container with Conversation Component */}
+          <Conversation className="flex-1 max-w-5xl mx-auto">
+            <ConversationContent className="space-y-4">
+              {isMessagesLoading && currentSessionId ? (
+                <div className="flex justify-center items-center h-32">
+                  <div className="flex items-center space-x-2 text-muted-foreground">
+                    <div className="w-4 h-4 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
+                    <span>Loading chat history...</span>
                   </div>
                 </div>
-              ))
-            )}
+              ) : (
+                <>
+                  {messagesToDisplay.map((msg, idx) => (
+                    <div
+                      key={idx}
+                      className={`flex ${
+                        msg.role === "user" ? "justify-end" : "justify-start"
+                      }`}
+                    >
+                      <div
+                        className={`inline-flex max-w-[90%] p-3 sm:p-4 rounded-2xl shadow-sm wrap-break-word ${
+                          msg.role === "user"
+                            ? "bg-secondary text-secondary-foreground"
+                            : msg.role === "assistant"
+                            ? "bg-accent text-accent-foreground"
+                            : "bg-muted text-muted-foreground text-center text-sm italic"
+                        }`}
+                      >
+                        <MessageContent
+                          content={msg.content}
+                          hasCalendarPermission={hasCalendarPermission}
+                          onRequestCalendarPermission={
+                            requestCalendarPermission
+                          }
+                        />
+                      </div>
+                    </div>
+                  ))}
 
-            <LoadingSteps questionType={questionType} isActive={isStreaming} />
+                  {isStreaming && <LoadingSteps />}
+                  <div className="pb-24" />
+                </>
+              )}
+            </ConversationContent>
 
-            <div ref={messagesEndRef} />
-          </div>
+            {/* Auto-scroll to bottom button */}
+            <ConversationScrollButton />
+          </Conversation>
 
           {/* Chat Input Component */}
           <ChatInput
@@ -354,7 +355,6 @@ export default function ChatInterface({ chatId }: ChatInterfaceProps) {
             onSendMessage={sendMessage}
             isStreaming={isStreaming}
             hasCalendarPermission={hasCalendarPermission}
-            onKeyDown={handleKeyDown}
             onRequestCalendarPermission={requestCalendarPermission}
           />
         </div>

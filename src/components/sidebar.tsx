@@ -1,10 +1,10 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { 
-  MessageCircle, 
-  Settings, 
-  User, 
+import {
+  MessageCircle,
+  Settings,
+  User,
   Plus,
   Trash2,
   Search
@@ -12,6 +12,10 @@ import {
 import { useChat } from '@/contexts/ChatContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
 
 export default function Sidebar() {
   const [open, setOpen] = useState(false) // Start closed for mobile
@@ -103,44 +107,45 @@ export default function Sidebar() {
         />
       )}
       
-      <aside className={`h-[calc(100vh-4rem)] bg-white border-r border-gray-100 flex flex-col transition-all duration-300
+      <aside className={`h-[calc(100vh-4rem)] bg-background border-r border-border flex flex-col transition-all duration-300
         ${open ? 'w-64' : '-translate-x-full w-64'} lg:w-64 lg:translate-x-0 fixed lg:relative top-16 lg:top-0 left-0 z-50 lg:z-auto`}>
 
-      {/* SAMA Branding */}
+      {/* Branding */}
       <div className={`px-3 pt-4 mb-6 ${open ? "" : "hidden"}`}>
         <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 rounded-full sama-bg-accent flex items-center justify-center">
-            <div className="w-4 h-4 rounded-full sama-bg-accent-light"></div>
+          <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center">
+            <div className="w-4 h-4 rounded-full bg-muted"></div>
           </div>
           <div>
-            <h2 className="text-lg font-bold sama-text-primary">SIA</h2>
-            <p className="text-xs sama-text-secondary">Wellness Assistant</p>
+            <h2 className="text-lg font-bold text-secondary">SIA</h2>
+            <p className="text-xs text-muted-foreground">Wellness Assistant</p>
           </div>
         </div>
       </div>
 
       {/* New Chat Button */}
       <div className={`px-3 mb-4 ${open ? "" : "hidden"}`}>
-        <button
+        <Button
           onClick={handleNewChat}
-          className="sama-button-primary w-full flex items-center gap-2 px-3 py-2 text-sm font-medium"
+          variant="secondary"
+          className="w-full"
         >
           <Plus size={18} />
           New Chat
-        </button>
+        </Button>
       </div>
 
       {/* Search Bar */}
       {open && (
         <div className="px-3 mb-4">
           <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 sama-text-secondary" />
-            <input
+            <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+            <Input
               type="text"
               placeholder="Search chats..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6683AB] focus:border-transparent sama-text-secondary placeholder-gray-400"
+              className="w-full pl-9"
             />
           </div>
         </div>
@@ -149,59 +154,62 @@ export default function Sidebar() {
       {/* Chat History */}
       <div className={`flex-1 ${open ? "px-3" : ""} overflow-y-auto`}>
         <div className={`${open ? "" : "hidden"}`}>
-          <div className="text-xs sama-text-secondary mb-2 pl-2 leading-tight uppercase tracking-wide font-medium">Recent Chats</div>
-          
+          <div className="text-xs text-muted-foreground mb-2 pl-2 leading-tight uppercase tracking-wide font-medium">Recent Chats</div>
+
           {isLoading ? (
             <div className="space-y-2">
               {[1, 2, 3].map(i => (
                 <div key={i} className="animate-pulse">
-                  <div className="h-12 sama-bg-accent rounded-lg"></div>
+                  <div className="h-12 bg-accent rounded-lg"></div>
                 </div>
               ))}
             </div>
           ) : filteredSessions.length === 0 ? (
-            <div className="text-center sama-text-secondary text-sm py-4">
+            <div className="text-center text-muted-foreground text-sm py-4">
               {searchQuery ? 'No chats found' : 'Start a conversation to see your chat history'}
             </div>
           ) : (
             <ul className="space-y-1">
               {filteredSessions.map(session => (
                 <li key={session.id} className="group relative">
-                  <button
-                    className={`w-full flex items-start gap-2 px-3 py-2 rounded-lg hover:sama-bg-accent sama-text-secondary text-sm transition text-left
-                      ${currentSessionId === session.id ? 'sama-bg-accent font-semibold sama-text-primary' : ''}`}
+                  <Button
+                    variant="ghost"
+                    className={`w-full flex items-start gap-2 px-3 py-2 h-auto justify-start text-left
+                      ${currentSessionId === session.id ? 'bg-accent font-semibold' : ''}`}
                     onClick={() => handleChatClick(session.id)}
                   >
                     <MessageCircle size={18} className="shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
                       <div className="truncate font-medium">{session.title || 'New Chat'}</div>
                       {session.last_message && (
-                        <div className="text-xs text-gray-500 truncate mt-1">
-                          {session.last_message.length > 50 
-                            ? session.last_message.substring(0, 50) + '...' 
+                        <div className="text-xs text-muted-foreground truncate mt-1">
+                          {session.last_message.length > 50
+                            ? session.last_message.substring(0, 50) + '...'
                             : session.last_message
                           }
                         </div>
                       )}
-                      <div className="text-xs text-gray-400 mt-1">
+                      <div className="text-xs text-muted-foreground mt-1">
                         {session.updated_at ? formatDate(session.updated_at) : 'Unknown'}
                         {session.message_count && session.message_count > 0 && (
                           <span className="ml-1">• {session.message_count} messages</span>
                         )}
                       </div>
                     </div>
-                  </button>
-                  
+                  </Button>
+
                   {/* Delete button */}
-                  <button
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-100 rounded"
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive"
                     onClick={(e) => {
                       e.stopPropagation()
                       setShowDeleteConfirm(session.id)
                     }}
                   >
-                    <Trash2 size={14} className="text-red-500" />
-                  </button>
+                    <Trash2 size={14} />
+                  </Button>
                 </li>
               ))}
             </ul>
@@ -209,49 +217,51 @@ export default function Sidebar() {
         </div>
       </div>
 
+      <Separator />
+
       {/* User info at bottom */}
-      <div className="flex items-center justify-center mb-6 mt-auto px-3">
-        <div className="flex items-center gap-2 sama-text-secondary px-2 py-1 rounded-full">
+      <div className="flex items-center justify-center mb-6 mt-4 px-3">
+        <div className="flex items-center gap-2 text-muted-foreground px-2 py-1 rounded-full">
           <User size={22} />
           {open && (
             <div className="min-w-0">
               <div className="text-sm font-medium truncate">
                 {session?.user?.user_metadata?.full_name || 'User'}
               </div>
-              <div className="text-xs text-gray-400 truncate">
+              <div className="text-xs text-muted-foreground truncate">
                 {session?.user?.email}
               </div>
             </div>
           )}
         </div>
         {open && (
-          <button className="ml-2 text-gray-400 hover:sama-text-primary p-1">
+          <Button variant="ghost" size="icon-sm" className="ml-2">
             <Settings size={20} />
-          </button>
+          </Button>
         )}
       </div>
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="sama-card p-6 max-w-sm mx-4">
-            <h3 className="text-lg font-semibold mb-2 sama-text-primary">Delete Chat</h3>
-            <p className="sama-text-secondary mb-4">Are you sure you want to delete this chat? This action cannot be undone.</p>
+        <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="p-6 max-w-sm mx-4">
+            <h3 className="text-lg font-semibold mb-2 text-foreground">Delete Chat</h3>
+            <p className="text-muted-foreground mb-4">Are you sure you want to delete this chat? This action cannot be undone.</p>
             <div className="flex gap-2 justify-end">
-              <button
+              <Button
+                variant="ghost"
                 onClick={() => setShowDeleteConfirm(null)}
-                className="px-4 py-2 sama-text-secondary hover:sama-text-primary transition-colors"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="destructive"
                 onClick={() => handleDeleteSession(showDeleteConfirm)}
-                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
               >
                 Delete
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
         </div>
       )}
       </aside>

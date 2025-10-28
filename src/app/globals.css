@@ -197,6 +197,10 @@ body {
   }
 }
 
+*::-webkit-scrollbar {
+  display: none;
+}
+
 /* Custom Responsive Utilities */
 @media (max-width: 768px) {
   /* Mobile chat layout */

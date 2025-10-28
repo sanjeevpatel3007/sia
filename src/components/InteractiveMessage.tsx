@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Calendar } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface InteractiveMessageProps {
   content: string;
@@ -31,30 +32,17 @@ export default function InteractiveMessage({
     const parts = text.split(/(\[CALENDAR_BUTTON\]|\[CONNECT_CALENDAR\]|```[\s\S]*?```)/);
     
     return parts.map((part, index) => {
-      if (part === '[CALENDAR_BUTTON]') {
+      if (part === '[CALENDAR_BUTTON]' || part === '[CONNECT_CALENDAR]') {
         // Render calendar button component
         return (
           <div key={index} className="my-3">
-            <button 
+            <Button
+              variant="secondary"
               onClick={onRequestCalendarPermission}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
             >
               <Calendar className="w-4 h-4" />
-              Connect Calendar
-            </button>
-          </div>
-        );
-      } else if (part === '[CONNECT_CALENDAR]') {
-        // Alternative calendar connection button
-        return (
-          <div key={index} className="my-3">
-            <button 
-              onClick={onRequestCalendarPermission}
-              className="sama-button-primary px-4 py-2 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
-            >
-              <Calendar className="w-4 h-4" />
-              Grant Calendar Access
-            </button>
+              {part === '[CONNECT_CALENDAR]' ? 'Grant Calendar Access' : 'Connect Calendar'}
+            </Button>
           </div>
         );
       } else if (part.startsWith('```') && part.endsWith('```')) {
@@ -70,17 +58,17 @@ export default function InteractiveMessage({
           const actualCode = lines.slice(1).join('\n');
           return (
             <div key={index} className="my-4">
-              <div className="bg-gray-800 text-gray-100 p-3 rounded-t-lg text-sm font-mono">
+              <div className="bg-muted border border-border p-3 rounded-t-lg text-sm font-mono">
                 {language}
               </div>
-              <pre className="bg-gray-900 text-gray-100 p-4 rounded-b-lg overflow-x-auto">
+              <pre className="bg-muted/50 border border-border border-t-0 p-4 rounded-b-lg overflow-x-auto">
                 <code>{actualCode}</code>
               </pre>
             </div>
           );
         } else {
           return (
-            <pre key={index} className="bg-gray-100 p-4 rounded-lg overflow-x-auto my-4">
+            <pre key={index} className="bg-muted p-4 rounded-lg overflow-x-auto my-4 border border-border">
               <code className="text-sm">{codeContent}</code>
             </pre>
           );
@@ -95,7 +83,7 @@ export default function InteractiveMessage({
               __html: part
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                 .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                .replace(/`(.*?)`/g, '<code class="bg-gray-100 px-1 py-0.5 rounded text-sm">$1</code>')
+                .replace(/`(.*?)`/g, '<code class="bg-muted px-1 py-0.5 rounded text-sm">$1</code>')
                 .replace(/\n/g, '<br>')
             }}
           />
