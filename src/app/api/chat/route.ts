@@ -20,13 +20,16 @@ export async function POST(req: Request) {
     if (session?.user?.id) {
       userId = session.user.id;
       
-      // Search for relevant memories from Mem0
+      // Search for relevant memories from Mem0 - use broader search terms
       const lastMessage = messages[messages.length - 1]?.content || '';
+      const searchQuery = lastMessage || 'user information personal details education routine schedule';
+      
       if (userId) {
-        const memories = await searchUserMemories(userId, lastMessage);
+        const memories = await searchUserMemories(userId, searchQuery);
         memoryContext = formatMemoriesForContext(memories);
         
         console.log('Found memories for user:', memories.length);
+        console.log('Memory context:', memoryContext);
       }
     }
   } catch (error) {
@@ -54,7 +57,7 @@ export async function POST(req: Request) {
 
     if (isCalendarRelated) {
       try {
-        console.log('Attempting to fetch calendar data...');
+        console.log('Attempting to fetch comprehensive calendar data...');
         
         // First test if we can access calendar at all
         const hasAccess = await testCalendarAccess(session);
@@ -65,24 +68,34 @@ export async function POST(req: Request) {
         // Set session in calendar service
         googleCalendarService.setSession(session);
         
-        // Get today's events
-        const todayEvents = await googleCalendarService.getTodayEvents();
-        console.log('Today events:', todayEvents.length);
+        // Get comprehensive calendar data (past, today, future) in one call
+        const calendarData = await googleCalendarService.getAllCalendarData();
+        console.log('Calendar data fetched - Past:', calendarData.pastEvents.length, 'Today:', calendarData.todayEvents.length, 'Upcoming:', calendarData.upcomingEvents.length);
         
-        // Get upcoming events for the next 7 days
-        const upcomingEvents = await googleCalendarService.getUpcomingEvents();
-        console.log('Upcoming events:', upcomingEvents.length);
-        
-        calendarContext = `\n\nCALENDAR CONTEXT:
-Today's events: ${todayEvents.length > 0 ? todayEvents.map(event => 
-          `- ${event.summary} (${event.start.dateTime ? new Date(event.start.dateTime).toLocaleTimeString() : 'All day'})`
-        ).join('\n') : 'No events scheduled for today.'}
+        // Format comprehensive calendar context
+        const formatEvent = (event: { summary: string; start: { dateTime?: string; date?: string } }) => {
+          const timeStr = event.start.dateTime 
+            ? new Date(event.start.dateTime).toLocaleTimeString() 
+            : event.start.date 
+            ? new Date(event.start.date).toLocaleDateString() 
+            : 'All day';
+          return `- ${event.summary} (${timeStr})`;
+        };
 
-Upcoming events (next 7 days): ${upcomingEvents.length > 0 ? upcomingEvents.slice(0, 5).map(event => 
-          `- ${event.summary} (${event.start.dateTime ? new Date(event.start.dateTime).toLocaleDateString() + ' ' + new Date(event.start.dateTime).toLocaleTimeString() : event.start.date ? new Date(event.start.date).toLocaleDateString() : 'All day'})`
-        ).join('\n') : 'No upcoming events.'}
+        calendarContext = `\n\nCOMPREHENSIVE CALENDAR CONTEXT:
 
-Use this calendar information to help the user with their schedule, suggest wellness breaks between meetings, or help them plan their day mindfully.`;
+RECENT PAST EVENTS (last 30 days): ${calendarData.pastEvents.length > 0 ? 
+          calendarData.pastEvents.slice(-5).map(formatEvent).join('\n') : 'No recent past events.'}
+
+TODAY'S EVENTS: ${calendarData.todayEvents.length > 0 ? 
+          calendarData.todayEvents.map(formatEvent).join('\n') : 'No events scheduled for today.'}
+
+UPCOMING EVENTS (next 30 days): ${calendarData.upcomingEvents.length > 0 ? 
+          calendarData.upcomingEvents.slice(0, 10).map(formatEvent).join('\n') : 'No upcoming events.'}
+
+TOTAL EVENTS IN RANGE: ${calendarData.allEvents.length} events
+
+Use this comprehensive calendar information to help the user with their schedule, suggest wellness breaks between meetings, help them plan their day mindfully, and provide insights about their calendar patterns. You can reference past events for context and upcoming events for planning.`;
       } catch (error) {
         console.error('Error fetching calendar data:', error);
         
@@ -110,7 +123,7 @@ Use this calendar information to help the user with their schedule, suggest well
   const result = await streamText({
     model: geminiModel,
     messages,
-    system: `You are SIA, a gentle and supportive AI wellness companion. Your role is to guide users toward balance, calm, and wellness with patience and encouragement. 
+    system: `You are SIA, a gentle and supportive AI wellness companion. Your role is to guide users toward balance, calm, and wellness with patience and encouragement.
 
 Key characteristics:
 - Always be warm, empathetic, and non-judgmental
@@ -118,19 +131,17 @@ Key characteristics:
 - Provide gentle guidance and support
 - Use encouraging and calming language
 - Help users with stress, anxiety, meditation, and self-care
-- Keep responses concise but meaningful
+- Keep responses VERY SHORT by default (1–2 sentences) unless explicitly asked to elaborate
 - Ask thoughtful questions to understand their needs
 - When discussing calendar or schedule, help users find balance and wellness in their busy lives
 - Suggest mindful breaks, breathing exercises, or stress relief techniques between meetings
 - Help users plan their day with wellness in mind
-- If calendar access is unavailable, gracefully guide users to reconnect their calendar or work with them to plan wellness activities based on what they tell you about their schedule
+- ALWAYS use the user's MEMORIES first. If memories contain personal information (name, education, routine, etc.), reference them directly in your response.
+- When user asks about their basic info, education, or personal details, check memories first and provide information from there.
+- If calendar access is unavailable, DO NOT suggest connecting the calendar or mention calendar buttons. Work with what you know from memory and user-provided information.
 
-IMPORTANT: When users ask calendar-related questions but don't have calendar access, include [CALENDAR_BUTTON] in your response to show a connect calendar button.
-
-Remember: You're here to support their wellness journey, not to replace professional medical advice.${calendarContext}${memoryContext}`,
+Remember: You're here to support their wellness journey, not to replace professional medical advice.${memoryContext}${calendarContext}`,
     onFinish: async () => {
-      // Note: Messages are now saved via individual message storage in the frontend
-      console.log('Response generated, will be saved via frontend message storage');
     }
   });
 

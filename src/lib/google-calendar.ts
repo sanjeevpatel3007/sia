@@ -187,6 +187,85 @@ export class GoogleCalendarService {
     const data = await response.json()
     return data.items || []
   }
+
+  // Comprehensive calendar data fetching - gets past, today, and future events in one call
+  async getAllCalendarData(calendarId: string = 'primary'): Promise<{
+    pastEvents: CalendarEvent[];
+    todayEvents: CalendarEvent[];
+    upcomingEvents: CalendarEvent[];
+    allEvents: CalendarEvent[];
+  }> {
+    const token = this.getAccessToken()
+    if (!token) {
+      console.error('No access token available')
+      throw new Error('No access token available')
+    }
+
+    // Calculate time ranges
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const startOfToday = new Date(today)
+    const endOfToday = new Date(today.getTime() + 24 * 60 * 60 * 1000)
+    const pastRange = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000)) // 30 days ago
+    const futureRange = new Date(now.getTime() + (30 * 24 * 60 * 60 * 1000)) // 30 days from now
+
+    console.log('Fetching comprehensive calendar data from:', pastRange.toISOString(), 'to:', futureRange.toISOString())
+
+    const params = new URLSearchParams({
+      timeMin: pastRange.toISOString(),
+      timeMax: futureRange.toISOString(),
+      maxResults: '100', // Increased to get more comprehensive data
+      singleEvents: 'true',
+      orderBy: 'startTime',
+    })
+
+    const url = `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events?${params}`
+    console.log('Fetching comprehensive events from:', url)
+
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Calendar API error:', response.status, response.statusText, errorText)
+      throw new Error(`Failed to fetch comprehensive calendar data: ${response.statusText} - ${errorText}`)
+    }
+
+    const data = await response.json()
+    const allEvents = data.items || []
+    console.log('Fetched total events:', allEvents.length)
+
+    // Categorize events
+    const pastEvents = allEvents.filter((event: CalendarEvent) => {
+      const eventTime = event.start.dateTime ? new Date(event.start.dateTime) : 
+                       event.start.date ? new Date(event.start.date) : new Date()
+      return eventTime < startOfToday
+    })
+
+    const todayEvents = allEvents.filter((event: CalendarEvent) => {
+      const eventTime = event.start.dateTime ? new Date(event.start.dateTime) : 
+                       event.start.date ? new Date(event.start.date) : new Date()
+      return eventTime >= startOfToday && eventTime < endOfToday
+    })
+
+    const upcomingEvents = allEvents.filter((event: CalendarEvent) => {
+      const eventTime = event.start.dateTime ? new Date(event.start.dateTime) : 
+                       event.start.date ? new Date(event.start.date) : new Date()
+      return eventTime >= endOfToday
+    })
+
+    console.log('Categorized events - Past:', pastEvents.length, 'Today:', todayEvents.length, 'Upcoming:', upcomingEvents.length)
+
+    return {
+      pastEvents,
+      todayEvents,
+      upcomingEvents,
+      allEvents
+    }
+  }
 }
 
 export const googleCalendarService = new GoogleCalendarService()
