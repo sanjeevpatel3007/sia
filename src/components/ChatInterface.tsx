@@ -6,10 +6,20 @@ import { DefaultChatTransport } from "ai";
 import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChat as useChatContext, ChatMessage } from "@/contexts/ChatContext";
+import { isCharacterSlug } from "@/lib/characters";
 import ChatInput from "./ChatInput";
 import Sidebar from "./sidebar";
 import LoadingSteps from "./LoadingSteps";
 import MessageContent from "./MessageContent";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Conversation,
   ConversationContent,
@@ -41,6 +51,13 @@ export default function ChatInterface({
   } = useChatContext();
 
   const [input, setInput] = useState("");
+  const [isMemoriesOpen, setIsMemoriesOpen] = useState(false);
+  const [memoriesLoading, setMemoriesLoading] = useState(false);
+  const [characterMemories, setCharacterMemories] = useState<Array<{ id: string; memory: string; score?: number }>>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editedText, setEditedText] = useState<string>("");
+  const [isAdding, setIsAdding] = useState(false);
+  const [newMemory, setNewMemory] = useState("");
 
   // Convert initial messages to AI SDK format
   const convertedInitialMessages = initialMessages.map((msg, index) => ({
@@ -100,7 +117,14 @@ export default function ChatInterface({
   ]);
 
   const sendMessage = async () => {
-    if (!input.trim() || !session?.user?.id) return;
+    if (!input.trim()) return;
+
+    // Check if this is a character-based chat using shared helper
+    const isCharacterChat = isCharacterSlug(chatId);
+    
+    // For character chats, no authentication needed
+    // For regular chats, authentication is required
+    if (!isCharacterChat && !session?.user?.id) return;
 
     const userInput = input;
     setInput("");
@@ -121,6 +145,58 @@ export default function ChatInterface({
     );
   };
 
+  // Fetch character memories when dropdown opens
+  useEffect(() => {
+    const fetchMemories = async () => {
+      if (!isMemoriesOpen) return;
+      if (!chatId || !isCharacterSlug(chatId)) return;
+      try {
+        setMemoriesLoading(true);
+        const res = await fetch(`/api/chat/character?userId=${encodeURIComponent(chatId)}&all=true`);
+        if (!res.ok) throw new Error("Failed to fetch memories");
+        const data = await res.json();
+        setCharacterMemories(Array.isArray(data.memories) ? data.memories : []);
+      } catch (e) {
+        console.error(e);
+        setCharacterMemories([]);
+      } finally {
+        setMemoriesLoading(false);
+      }
+    };
+    fetchMemories();
+  }, [isMemoriesOpen, chatId]);
+
+  const beginEdit = (m: { id: string; memory: string }) => {
+    setEditingId(m.id);
+    setEditedText(m.memory);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditedText("");
+  };
+
+  const saveEdit = async () => {
+    if (!editingId || !chatId) return;
+    try {
+      setMemoriesLoading(true);
+      const res = await fetch(`/api/chat/character`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: chatId, memoryId: editingId, memory: editedText }),
+      });
+      if (!res.ok) throw new Error("Failed to update memory");
+      // Update local list optimistically
+      setCharacterMemories((prev) => prev.map((m) => (m.id === editingId ? { ...m, memory: editedText } : m)));
+      setEditingId(null);
+      setEditedText("");
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setMemoriesLoading(false);
+    }
+  };
+
   return (
     <div className="flex h-[calc(100vh-4rem)]">
       {/* Sidebar */}
@@ -130,7 +206,7 @@ export default function ChatInterface({
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
         <div className="flex-1 flex flex-col overflow-hidden relative">
           {/* Calendar Status Banner */}
-          <div
+          <div  
             className={`border-b border-border p-3 flex items-center justify-between ${
               hasCalendarPermission
                 ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
@@ -218,8 +294,134 @@ export default function ChatInterface({
                   Connect
                 </button>
               )}
+
+              {/* Character memories dropdown */}
+              {chatId && isCharacterSlug(chatId) && (
+                <DropdownMenu onOpenChange={setIsMemoriesOpen}>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className="ml-2 inline-flex items-center justify-center w-8 h-8 rounded-full border border-border hover:bg-muted transition-colors"
+                      aria-label="Show character memories"
+                    >
+                      <Avatar className="w-7 h-7">
+                        <AvatarFallback className="text-xs uppercase">
+                          {chatId.slice(0, 2)}
+                        </AvatarFallback>
+                      </Avatar>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-80 p-0">
+                    <DropdownMenuLabel className="px-3 py-2">
+                      Memories for {chatId}
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {/* Add new memory */}
+                    <div className="px-3 py-2 border-b border-border">
+                      {isAdding ? (
+                        <div className="space-y-2">
+                          <textarea
+                            value={newMemory}
+                            onChange={(e) => setNewMemory(e.target.value)}
+                            className="w-full text-sm p-2 border border-border rounded-md bg-background"
+                            rows={3}
+                            placeholder="Write a new memory..."
+                          />
+                          <div className="flex gap-2 justify-end">
+                            <button onClick={() => { setIsAdding(false); setNewMemory(""); }} className="px-2 py-1 text-xs rounded-md border border-border hover:bg-muted">Cancel</button>
+                            <button
+                              onClick={async () => {
+                                if (!chatId || !newMemory.trim()) return;
+                                try {
+                                  setMemoriesLoading(true);
+                                  const res = await fetch(`/api/chat/character`, {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ userId: chatId, memory: newMemory.trim() }),
+                                  });
+                                  if (!res.ok) throw new Error("Failed to add memory");
+                                  // Optimistically add to list
+                                  setCharacterMemories((prev) => [{ id: `tmp-${Date.now()}`, memory: newMemory.trim() }, ...prev]);
+                                  setNewMemory("");
+                                  setIsAdding(false);
+                                } catch (e) {
+                                  console.error(e);
+                                } finally {
+                                  setMemoriesLoading(false);
+                                }
+                              }}
+                              className="px-2 py-1 text-xs rounded-md bg-primary text-primary-foreground hover:opacity-90"
+                            >
+                              Add
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button onClick={() => setIsAdding(true)} className="w-full text-left text-xs px-2 py-1 rounded-md border border-dashed border-border hover:bg-muted">+ Add memory</button>
+                      )}
+                    </div>
+                    <div className="px-0 py-0">
+                      {memoriesLoading ? (
+                        <div className="p-4 text-sm text-muted-foreground flex items-center gap-2">
+                          <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin" />
+                          Loading memories...
+                        </div>
+                      ) : characterMemories.length === 0 ? (
+                        <div className="p-4 text-sm text-muted-foreground">No memories found yet.</div>
+                      ) : (
+                        <ScrollArea className="h-64">
+                          <ul className="p-2 space-y-2">
+                            {characterMemories.map((m) => (
+                              <li key={m.id} className="px-3 py-2 rounded-md bg-muted/60 text-sm">
+                                {editingId === m.id ? (
+                                  <div className="space-y-2">
+                                    <textarea
+                                      value={editedText}
+                                      onChange={(e) => setEditedText(e.target.value)}
+                                      className="w-full text-sm p-2 border border-border rounded-md bg-background"
+                                      rows={3}
+                                    />
+                                    <div className="flex gap-2 justify-end">
+                                      <button onClick={cancelEdit} className="px-2 py-1 text-xs rounded-md border border-border hover:bg-muted">Cancel</button>
+                                      <button onClick={saveEdit} className="px-2 py-1 text-xs rounded-md bg-primary text-primary-foreground hover:opacity-90">Save</button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="whitespace-pre-wrap pr-2">{m.memory}</div>
+                                    <div className="flex gap-2">
+                                      <button onClick={() => beginEdit(m)} className="text-xs px-2 py-1 rounded-md border border-border hover:bg-muted">Edit</button>
+                                      <button
+                                        onClick={async () => {
+                                          try {
+                                            setMemoriesLoading(true);
+                                            const res = await fetch(`/api/chat/character?memoryId=${encodeURIComponent(m.id)}`, { method: "DELETE" });
+                                            if (!res.ok) throw new Error("Failed to delete memory");
+                                            setCharacterMemories((prev) => prev.filter((x) => x.id !== m.id));
+                                          } catch (e) {
+                                            console.error(e);
+                                          } finally {
+                                            setMemoriesLoading(false);
+                                          }
+                                        }}
+                                        className="text-xs px-2 py-1 rounded-md border border-destructive text-destructive hover:bg-destructive/10"
+                                      >
+                                        Delete
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        </ScrollArea>
+                      )}
+                    </div>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
           </div>
+          {/* Character memories dropdown is rendered in the banner actions above */}
 
           {/* Messages Container with Conversation Component */}
           <Conversation className="flex-1 w-full max-w-5xl mx-auto">

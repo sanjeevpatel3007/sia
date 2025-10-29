@@ -4,7 +4,7 @@ import { ChatProvider } from '@/contexts/ChatContext'
 
 export default function ChatLayout({ children }: { children: React.ReactNode }) {
     return (
-        <ProtectedRoute>
+        // <ProtectedRoute>
             <ChatProvider>
                 <div className="min-h-screen bg-white">
                     <Navbar />
@@ -13,6 +13,6 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
                     </div>
                 </div>
             </ChatProvider>
-        </ProtectedRoute>
+        // </ProtectedRoute>
     )
 }

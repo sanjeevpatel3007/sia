@@ -10,6 +10,7 @@ import TypewriterText from '@/components/TypewriterText'
 
 
 import { useRouter } from "next/navigation";
+import Character from '@/components/character'
 
 export default function Home() {
   const { user, signInWithGoogle, signOut } = useAuth();
@@ -172,6 +173,7 @@ export default function Home() {
                 </div>
               </div>
 
+<Character />
               <div className="w-full max-w-[497px] lg:w-[497px] flex flex-col justify-center items-center gap-6 sm:gap-8 md:gap-10 lg:gap-12 relative z-30 mt-6 sm:mt-8 md:mt-10 lg:mt-12">
                 <div className="backdrop-blur-[8.25px] flex justify-start items-center gap-4 relative z-50">
                   <button
