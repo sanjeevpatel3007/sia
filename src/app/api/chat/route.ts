@@ -52,18 +52,21 @@ export async function POST(req: Request) {
   try {
     if (session?.user?.id) {
       userId = session.user.id;
-
-      // Search for relevant memories from Mem0
-      const lastMessage = getMessageText(messages[messages.length - 1]) || "";
+      
+      // Search for relevant memories from Mem0 - use broader search terms
+      const lastMessage = getMessageText(messages[messages.length - 1]) || '';
+      const searchQuery = lastMessage || 'user information personal details education routine schedule';
+      
       if (userId) {
-        const memories = await searchUserMemories(userId, lastMessage);
+        const memories = await searchUserMemories(userId, searchQuery);
         memoryContext = formatMemoriesForContext(memories);
-
-        console.log("Found memories for user:", memories.length);
+        
+        console.log('Found memories for user:', memories.length);
+        console.log('Memory context:', memoryContext);
       }
     }
   } catch (error) {
-    console.error("Error retrieving memories:", error);
+    console.error('Error retrieving memories:', error);
     // Continue without context if there's an error
   }
 
@@ -91,6 +94,9 @@ Key characteristics:
 - When discussing calendar or schedule, help users find balance and wellness in their busy lives
 - Suggest mindful breaks, breathing exercises, or stress relief techniques between meetings
 - Help users plan their day with wellness in mind
+- ALWAYS use the user's MEMORIES first. If memories contain personal information (name, education, routine, etc.), reference them directly in your response.
+- When user asks about their basic info, education, or personal details, check memories first and provide information from there.
+
 
 ${
   hasCalendarTools
@@ -170,8 +176,7 @@ Remember: You're here to support their wellness journey, not to replace professi
     try {
       // SAVE TO MEM0 (Intelligent Memory Extraction)
       // This will extract only relevant facts from the conversation
-      // From 25 messages, it will store only 8-10 important memories
-      // Convert UIMessages to simple format for Mem0
+      // From recent messages, it will store only important memories
       const conversationForMemory = messages
         .slice(-5)
         .filter((msg) => msg.role === "user" || msg.role === "assistant")
@@ -179,13 +184,13 @@ Remember: You're here to support their wellness journey, not to replace professi
           role: msg.role as "user" | "assistant",
           content: getMessageText(msg),
         }));
-      addIntelligentMemories(userId, conversationForMemory).catch((error) => {
-        console.error("Error saving intelligent memories:", error);
+      addIntelligentMemories(userId, conversationForMemory).catch(error => {
+        console.error('Error saving intelligent memories:', error);
       });
 
-      console.log("Extracted memories to Mem0");
+      console.log('Extracted memories to Mem0');
     } catch (error) {
-      console.error("Error saving to Mem0:", error);
+      console.error('Error saving to Mem0:', error);
     }
   }
 
