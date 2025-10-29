@@ -121,7 +121,6 @@ export default function ChatInterface({
     );
   };
 
-
   return (
     <div className="flex h-[calc(100vh-4rem)]">
       {/* Sidebar */}
@@ -131,52 +130,58 @@ export default function ChatInterface({
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
         <div className="flex-1 flex flex-col overflow-hidden relative">
           {/* Calendar Status Banner */}
-          <div className={`border-b border-border p-3 flex items-center justify-between ${
-            hasCalendarPermission 
-              ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800' 
-              : 'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800'
-          }`}>
+          <div
+            className={`border-b border-border p-3 flex items-center justify-between ${
+              hasCalendarPermission
+                ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
+                : "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800"
+            }`}
+          >
             <div className="flex items-center gap-3">
               {/* Calendar Icon */}
-              <div className={`p-2 rounded-full ${
-                hasCalendarPermission 
-                  ? 'bg-green-100 dark:bg-green-900/30' 
-                  : 'bg-blue-100 dark:bg-blue-900/30'
-              }`}>
-                <Image 
-                  src="/images/calendar.png" 
-                  alt="Google Calendar" 
+              <div
+                className={`p-2 rounded-full ${
+                  hasCalendarPermission
+                    ? "bg-green-100 dark:bg-green-900/30"
+                    : "bg-blue-100 dark:bg-blue-900/30"
+                }`}
+              >
+                <Image
+                  src="/images/calendar.png"
+                  alt="Google Calendar"
                   width={20}
                   height={20}
                   className="w-5 h-5"
                 />
               </div>
-              
+
               {/* Status Text */}
               <div className="flex flex-col">
-                <span className={`text-sm font-medium ${
-                  hasCalendarPermission 
-                    ? 'text-green-800 dark:text-green-200' 
-                    : 'text-blue-800 dark:text-blue-200'
-                }`}>
-                  {hasCalendarPermission 
-                    ? 'Google Calendar Connected' 
-                    : 'Connect Google Calendar'
-                  }
+                <span
+                  className={`text-sm font-medium ${
+                    hasCalendarPermission
+                      ? "text-green-800 dark:text-green-200"
+                      : "text-blue-800 dark:text-blue-200"
+                  }`}
+                >
+                  {hasCalendarPermission
+                    ? "Google Calendar Connected"
+                    : "Connect Google Calendar"}
                 </span>
-                <span className={`text-xs ${
-                  hasCalendarPermission 
-                    ? 'text-green-600 dark:text-green-400' 
-                    : 'text-blue-600 dark:text-blue-400'
-                }`}>
-                  {hasCalendarPermission 
-                    ? 'Ask about your schedule for personalized wellness guidance!' 
-                    : 'Get personalized wellness guidance based on your schedule'
-                  }
+                <span
+                  className={`text-xs ${
+                    hasCalendarPermission
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-blue-600 dark:text-blue-400"
+                  }`}
+                >
+                  {hasCalendarPermission
+                    ? "Ask about your schedule for personalized wellness guidance!"
+                    : "Get personalized wellness guidance based on your schedule"}
                 </span>
               </div>
             </div>
-            
+
             {/* Action Button */}
             <div className="flex items-center gap-2">
               {hasCalendarPermission ? (
@@ -275,10 +280,13 @@ export default function ChatInterface({
                           );
                         }
 
-                        // Render calendar tool invocations inside Message UI
+                        // Render tool invocations inside Message UI
                         if (isToolPart) {
                           const toolName = part.type.replace("tool-", "");
                           const toolPart = part as any;
+
+                          // Check if this is a memory tool
+                          const isMemoryTool = toolName === "saveMemory" || toolName === "saveConversationMemories";
 
                           return (
                             <Message
@@ -287,15 +295,19 @@ export default function ChatInterface({
                             >
                               <MessageContentWrapper variant="flat">
                                 <div className="flex w-full p-3 sm:p-4 rounded-lg border border-border bg-muted">
+                                  {/* Input Streaming State */}
                                   {toolPart.state === "input-streaming" && (
                                     <div className="flex items-center gap-2 text-muted-foreground text-sm">
                                       <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
                                       <span>
-                                        Preparing to access calendar...
+                                        {isMemoryTool
+                                          ? "Preparing to save memory..."
+                                          : "Preparing to access calendar..."}
                                       </span>
                                     </div>
                                   )}
 
+                                  {/* Input Available State */}
                                   {toolPart.state === "input-available" && (
                                     <div className="flex items-center gap-2 text-muted-foreground text-sm">
                                       <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
@@ -308,10 +320,15 @@ export default function ChatInterface({
                                           `Searching calendar for "${toolPart.input?.query}"...`}
                                         {toolName === "getEventsInRange" &&
                                           "Fetching events in date range..."}
+                                        {toolName === "saveMemory" &&
+                                          "Saving important information..."}
+                                        {toolName === "saveConversationMemories" &&
+                                          "Extracting conversation memories..."}
                                       </span>
                                     </div>
                                   )}
 
+                                  {/* Output Available State */}
                                   {toolPart.state === "output-available" && (
                                     <div className="space-y-2">
                                       <div className="flex items-center gap-2 text-primary text-sm font-medium">
@@ -328,7 +345,11 @@ export default function ChatInterface({
                                             d="M5 13l4 4L19 7"
                                           />
                                         </svg>
-                                        <span>Calendar data retrieved</span>
+                                        <span>
+                                          {isMemoryTool
+                                            ? "Memory saved"
+                                            : "Calendar data retrieved"}
+                                        </span>
                                       </div>
                                       {toolPart.output?.events?.length > 0 && (
                                         <div className="text-xs text-muted-foreground">
@@ -342,6 +363,7 @@ export default function ChatInterface({
                                     </div>
                                   )}
 
+                                  {/* Output Error State */}
                                   {toolPart.state === "output-error" && (
                                     <div className="flex items-center gap-2 text-destructive text-sm">
                                       <svg
@@ -357,7 +379,11 @@ export default function ChatInterface({
                                           d="M6 18L18 6M6 6l12 12"
                                         />
                                       </svg>
-                                      <span>Failed to access calendar</span>
+                                      <span>
+                                        {isMemoryTool
+                                          ? "Failed to save memory"
+                                          : "Failed to access calendar"}
+                                      </span>
                                     </div>
                                   )}
                                 </div>
@@ -371,8 +397,16 @@ export default function ChatInterface({
                     </div>
                   ))}
 
-                  {messages.length > 0 && status === "submitted" && <LoadingSteps />}
-                  <div className="pb-24" />
+                  {/* Show loading when submitted OR when streaming but last message has no content yet */}
+                  {(status === "submitted" ||
+                    (status === "streaming" &&
+                      messages.length > 0 &&
+                      messages[messages.length - 1].role === "assistant" &&
+                      !messages[messages.length - 1].parts.some(
+                        (p: any) =>
+                          p.type === "text" && p.text.trim().length > 0
+                      ))) && <LoadingSteps />}
+                  <div className="pb-28" />
                 </>
               )}
             </ConversationContent>
