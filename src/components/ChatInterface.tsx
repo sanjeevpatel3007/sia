@@ -6,7 +6,6 @@ import { DefaultChatTransport } from "ai";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChat as useChatContext, ChatMessage } from "@/contexts/ChatContext";
 import ChatInput from "./ChatInput";
-import QuickPrompts from "./QuickPrompts";
 import Sidebar from "./sidebar";
 import LoadingSteps from "./LoadingSteps";
 import MessageContent from "./MessageContent";
@@ -33,7 +32,6 @@ export default function ChatInterface({
     useAuth();
   const {
     currentSessionId,
-    currentMessages,
     isMessagesLoading,
     switchToSession,
     setCurrentSessionId,
@@ -44,8 +42,8 @@ export default function ChatInterface({
   const [input, setInput] = useState("");
 
   // Convert initial messages to AI SDK format
-  const convertedInitialMessages = initialMessages.map((msg) => ({
-    id: msg.id || `${msg.role}-${Date.now()}`,
+  const convertedInitialMessages = initialMessages.map((msg, index) => ({
+    id: msg.id || `${msg.role}-${index}`,
     role: msg.role as any,
     parts:
       msg.parts && msg.parts.length > 0
@@ -122,9 +120,6 @@ export default function ChatInterface({
     );
   };
 
-  const handleQuickPrompt = (prompt: string) => {
-    setInput(prompt);
-  };
 
   return (
     <div className="flex h-[calc(100vh-4rem)]">
@@ -134,12 +129,25 @@ export default function ChatInterface({
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
         <div className="flex-1 flex flex-col overflow-hidden relative">
-          {/* Calendar Status */}
-          {hasCalendarPermission && (
-            <div className="bg-accent border-b border-border p-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
+          {/* Calendar Status Banner */}
+          <div className={`border-b border-border p-3 flex items-center justify-between ${
+            hasCalendarPermission 
+              ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800' 
+              : 'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800'
+          }`}>
+            <div className="flex items-center gap-3">
+              {/* Calendar Icon */}
+              <div className={`p-2 rounded-full ${
+                hasCalendarPermission 
+                  ? 'bg-green-100 dark:bg-green-900/30' 
+                  : 'bg-blue-100 dark:bg-blue-900/30'
+              }`}>
                 <svg
-                  className="w-4 h-4 text-accent-foreground"
+                  className={`w-5 h-5 ${
+                    hasCalendarPermission 
+                      ? 'text-green-600 dark:text-green-400' 
+                      : 'text-blue-600 dark:text-blue-400'
+                  }`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -151,26 +159,77 @@ export default function ChatInterface({
                     d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                   />
                 </svg>
-                <span className="text-accent-foreground text-sm font-medium">
-                  Calendar Connected - Ask about your schedule!
+              </div>
+              
+              {/* Status Text */}
+              <div className="flex flex-col">
+                <span className={`text-sm font-medium ${
+                  hasCalendarPermission 
+                    ? 'text-green-800 dark:text-green-200' 
+                    : 'text-blue-800 dark:text-blue-200'
+                }`}>
+                  {hasCalendarPermission 
+                    ? 'Google Calendar Connected' 
+                    : 'Connect Google Calendar'
+                  }
+                </span>
+                <span className={`text-xs ${
+                  hasCalendarPermission 
+                    ? 'text-green-600 dark:text-green-400' 
+                    : 'text-blue-600 dark:text-blue-400'
+                }`}>
+                  {hasCalendarPermission 
+                    ? 'Ask about your schedule for personalized wellness guidance!' 
+                    : 'Get personalized wellness guidance based on your schedule'
+                  }
                 </span>
               </div>
-              {/* <div className="flex gap-2">
-                <button
-                  onClick={testCalendarAccess}
-                  className="px-2 py-1 sama-button-primary text-xs"
-                >
-                  Test Access
-                </button>
-                <button
-                  onClick={debugScopes}
-                  className="px-2 py-1 bg-gray-500 hover:bg-gray-600 text-white text-xs rounded-lg transition-colors"
-                >
-                  Debug Scopes
-                </button>
-              </div> */}
             </div>
-          )}
+            
+            {/* Action Button */}
+            <div className="flex items-center gap-2">
+              {hasCalendarPermission ? (
+                <div className="flex items-center gap-1">
+                  <svg
+                    className="w-4 h-4 text-green-600 dark:text-green-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+                    Connected
+                  </span>
+                </div>
+              ) : (
+                <button
+                  onClick={requestCalendarPermission}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors duration-200"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                    />
+                  </svg>
+                  Connect
+                </button>
+              )}
+            </div>
+          </div>
 
           {/* Messages Container with Conversation Component */}
           <Conversation className="flex-1 w-full max-w-5xl mx-auto">

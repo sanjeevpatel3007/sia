@@ -58,8 +58,9 @@ export default function Sidebar() {
 
   const handleNewChat = async () => {
     try {
-      // Just navigate to /chat without creating session
-      router.push('/chat')
+      // Create a new session ID and navigate to it
+      const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      router.push(`/chat/${newSessionId}`)
     } catch (error) {
       console.error('Error navigating to new chat:', error)
     }
