@@ -15,8 +15,9 @@ export interface ChatMessage {
   id?: string;
   user_id: string;
   session_id: string;
-  role: 'user' | 'assistant';
-  content: string;
+  role: 'user' | 'assistant' | 'system' | 'tool';
+  content?: string; // Made optional to match database interface
+  parts?: any[]; // Added parts array to match database interface
   created_at?: string;
   metadata?: Record<string, unknown>;
 }
@@ -69,7 +70,7 @@ export async function createNewSession(userId: string, title?: string): Promise<
 export async function addMessage(
   sessionId: string, 
   userId: string, 
-  role: 'user' | 'assistant', 
+  role: 'user' | 'assistant' | 'system' | 'tool', 
   content: string
 ): Promise<ChatMessage> {
   try {

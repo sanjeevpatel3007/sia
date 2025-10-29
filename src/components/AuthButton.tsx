@@ -64,6 +64,6 @@ export default function AuthButton() {
         />
       </svg>
       Sign in with Google
-    </button>
+    </Button>
   )
 }
