@@ -6,6 +6,7 @@ import { useEffect, useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { X } from 'lucide-react'
+import TypewriterText from '@/components/TypewriterText'
 
 export default function Home() {
   const { user, signInWithGoogle, signOut } = useAuth()
@@ -136,6 +137,16 @@ export default function Home() {
                     Stronger, Calmer.
                     <br />
                     For Life.
+                  </div>
+                  <div className="w-full max-w-[506.08px] lg:w-[506.08px] text-center flex justify-center flex-col text-secondary/80 sm:text-lg md:text-2xl leading-[1.4] sm:leading-[1.45] md:leading-normal lg:leading-7 font-sans px-2 sm:px-4 md:px-0 lg:text-lg font-medium text-sm">
+                    <TypewriterText 
+                      texts={[
+                        "Personalized with Google Calendar",
+                        "AI-powered memory for tailored guidance"
+                      ]}
+                      speed={80}
+                      pauseTime={3000}
+                    />
                   </div>
                   <div className="w-full max-w-[506.08px] lg:w-[506.08px] text-center flex justify-center flex-col text-secondary/80 sm:text-lg md:text-xl leading-[1.4] sm:leading-[1.45] md:leading-normal lg:leading-7 font-sans px-2 sm:px-4 md:px-0 lg:text-lg font-medium text-sm">
                     A mindful wellness approach built for modern lives and better healthspan.

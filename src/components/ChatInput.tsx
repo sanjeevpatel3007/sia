@@ -1,12 +1,11 @@
 "use client";
 
-import { Calendar } from "lucide-react";
+import Image from "next/image";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Button } from "@/components/ui/button";
 import {
   PromptInput,
   PromptInputTextarea,
@@ -16,7 +15,6 @@ import {
   PromptInputButton,
 } from "@/components/ai-elements/prompt-input";
 import QuickPrompts from "./QuickPrompts";
-import { ChatMessage } from "@/contexts/ChatContext";
 import { UIMessage } from "ai";
 
 interface ChatInputProps {
@@ -79,7 +77,13 @@ export default function ChatInput({
                   }
                   disabled={isStreaming}
                 >
-                  <Calendar className="w-4 h-4" />
+                  <Image
+                    src="/images/calendar.png"
+                    alt="Google Calendar"
+                    width={16}
+                    height={16}
+                    className="w-8 h-8"
+                  />
                 </PromptInputButton>
               </TooltipTrigger>
               <TooltipContent>

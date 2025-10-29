@@ -235,11 +235,7 @@ export default function Sidebar() {
             </div>
           )}
         </div>
-        {open && (
-          <Button variant="ghost" size="icon-sm" className="ml-2">
-            <Settings size={20} />
-          </Button>
-        )}
+       
       </div>
 
       {/* Delete Confirmation Modal */}
