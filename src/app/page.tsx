@@ -69,11 +69,10 @@ export default function Home() {
       {/* Notification */}
       {notification && (
         <Card
-          className={`fixed top-4 right-4 z-50 max-w-md ${
-            notification.type === "success"
+          className={`fixed top-4 right-4 z-50 max-w-md ${notification.type === "success"
               ? "border-primary bg-primary/10"
               : "border-destructive bg-destructive/10"
-          }`}
+            }`}
         >
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -129,11 +128,10 @@ export default function Home() {
                 <div className="h-6 sm:h-7 md:h-8 flex justify-start items-start gap-2 sm:gap-3 relative z-50 pointer-events-auto">
                   <button
                     onClick={() => (user ? signOut() : signInWithGoogle())}
-                    className={`px-2 sm:px-3 md:px-[14px] py-1 sm:py-[6px] overflow-hidden rounded-full flex justify-center items-center cursor-pointer shadow-[0px_1px_2px_rgba(55,50,47,0.12)] transition-colors relative z-[140] pointer-events-auto ${
-                      user
+                    className={`px-2 sm:px-3 md:px-[14px] py-1 sm:py-[6px] overflow-hidden rounded-full flex justify-center items-center cursor-pointer shadow-[0px_1px_2px_rgba(55,50,47,0.12)] transition-colors relative z-[140] pointer-events-auto ${user
                         ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         : "bg-white text-secondary hover:bg-white/90"
-                    }`}
+                      }`}
                     aria-label={user ? "Log out" : "Log in"}
                   >
                     <span className="flex flex-col justify-center text-xs md:text-[13px] font-medium leading-5 font-sans">
@@ -145,7 +143,7 @@ export default function Home() {
             </div>
 
             {/* Hero Section */}
-            <div className="pt-16 sm:pt-20 md:pt-24 lg:pt-[216px] pb-8 sm:pb-12 md:pb-16 flex flex-col justify-start items-center px-2 sm:px-4 md:px-8 lg:px-0 w-full sm:pl-0 sm:pr-0 pl-0 pr-0 relative z-20">
+            <div className="pt-16 sm:pt-20 md:pt-24 lg:pt-[120px] pb-8 sm:pb-12 md:pb-16 flex flex-col justify-start items-center px-2 sm:px-4 md:px-8 lg:px-0 w-full sm:pl-0 sm:pr-0 pl-0 pr-0 relative z-20">
               <div className="w-full max-w-[937px] lg:w-[937px] flex flex-col justify-center items-center gap-3 sm:gap-4 md:gap-5 lg:gap-6">
                 <div className="self-stretch rounded-[3px] flex flex-col justify-center items-center gap-4 sm:gap-5 md:gap-6 lg:gap-8">
                   <div className="w-full max-w-[748.71px] lg:w-[748.71px] text-center flex justify-center flex-col text-secondary text-[24px] xs:text-[28px] sm:text-[36px] md:text-[52px] lg:text-[80px] font-normal leading-[1.1] sm:leading-[1.15] md:leading-[1.2] lg:leading-24 font-serif px-2 sm:px-4 md:px-0">
@@ -153,27 +151,25 @@ export default function Home() {
                     <br />
                     For Life.
                   </div>
-                  <div className="w-full max-w-[506.08px] lg:w-[506.08px] text-center flex justify-center flex-col text-secondary/80 sm:text-lg md:text-2xl leading-[1.4] sm:leading-[1.45] md:leading-normal lg:leading-7 font-sans px-2 sm:px-4 md:px-0 lg:text-lg font-medium text-sm">
-                    <TypewriterText 
+                  <div className="w-full max-w-[506.08px] lg:w-[506.08px] text-center flex justify-center flex-col text-secondary/80 sm:text-lg md:text-3xl leading-[1.4] sm:leading-[1.45] md:leading-normal lg:leading-7 font-sans px-2 sm:px-4 md:px-0 font-medium">
+                    <TypewriterText
                       texts={[
-                        "Personalized with Google Calendar",
-                        "AI-powered memory for tailored guidance"
+                        "Calendar‑personalized",
+                        "Memory‑aware guidance"
                       ]}
                       speed={80}
                       pauseTime={3000}
                     />
                   </div>
                   <div className="w-full max-w-[506.08px] lg:w-[506.08px] text-center flex justify-center flex-col text-secondary/80 sm:text-lg md:text-xl leading-[1.4] sm:leading-[1.45] md:leading-normal lg:leading-7 font-sans px-2 sm:px-4 md:px-0 lg:text-lg font-medium text-sm">
-                    A mindful wellness approach built for modern lives and
-                    better healthspan.
+                    Mindful coaching for modern life — balanced, calm, and sustainable.
                     <br className="hidden sm:block" />
-                    Welcome to SAMA - where balance, tranquility, and strength
-                    come together.
+                    Welcome to SAMA.
                   </div>
                 </div>
               </div>
 
-<Character />
+              <Character />
               <div className="w-full max-w-[497px] lg:w-[497px] flex flex-col justify-center items-center gap-6 sm:gap-8 md:gap-10 lg:gap-12 relative z-30 mt-6 sm:mt-8 md:mt-10 lg:mt-12">
                 <div className="backdrop-blur-[8.25px] flex justify-start items-center gap-4 relative z-50">
                   <button
@@ -189,13 +185,12 @@ export default function Home() {
                 </div>
 
                 {/* Features Section */}
-                <div className="w-full max-w-[600px] flex flex-col items-center gap-4 sm:gap-6">
+                {/* <div className="w-full max-w-[600px] flex flex-col items-center gap-4 sm:gap-6">
                   <div className="text-center text-secondary/70 text-sm sm:text-base font-medium">
                     Smart Personalization with Calendar & Memory
                   </div>
 
                   <div className="flex items-center justify-center gap-4 sm:gap-6">
-                    {/* Google Calendar Icon */}
                     <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-secondary/20">
                       <Image
                         src="/images/calendar.png"
@@ -209,7 +204,6 @@ export default function Home() {
                       </span>
                     </div>
 
-                    {/* Memory Icon */}
                     <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-secondary/20">
                       <svg
                         className="w-6 h-6 text-secondary"
@@ -235,11 +229,11 @@ export default function Home() {
                     and remember your preferences for a truly tailored
                     experience.
                   </div>
-                </div>
+                </div> */}
               </div>
 
               {/* SAMA Philosophy Section */}
-              <div className="w-full max-w-[600px] mt-12 sm:mt-16 md:mt-20 lg:mt-24">
+              {/* <div className="w-full max-w-[600px] mt-12 sm:mt-16 md:mt-20 lg:mt-24">
                 <div className="bg-accent/20 backdrop-blur-sm rounded-2xl p-6 sm:p-8 border border-accent/30">
                   <h3 className="text-2xl sm:text-3xl font-bold mb-4 text-accent-foreground text-center">
                     What is SAMA?
@@ -255,7 +249,7 @@ export default function Home() {
                     Come, #FindYourSAMA
                   </p>
                 </div>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>

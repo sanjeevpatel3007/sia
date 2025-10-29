@@ -3,19 +3,37 @@ export interface Character {
   name: string;
   slug: string;
   description: string;
+  age: number;
+  needs: string[];
+  classes: string[];
 }
 
 export const CHARACTERS: Character[] = [
   {
     name: "Sheela",
     slug: "sheela",
-    description: "kjnfjrsndgj smfg",
+    description: "A pregnant woman focusing on safe movement during maternity.",
+    age: 32,
+    needs: ["Prenatal health", "Calm mind", "Gentle fitness"],
+    classes: ["Prenatal Yoga", "Meditation", "Breathwork"]
   },
   {
     name: "Ritvik",
     slug: "ritvik",
-    description: "kjnfjrsndg jsmfg",
+    description: "A full energetic man aiming to stay fit, strong, and focused.",
+    age: 41,
+    needs: ["Strength training", "Body balance", "Mental focus"],
+    classes: ["Pilates", "Gym", "HIIT" ,"Meditation"]
   },
+  {
+    name: "Maya",
+    slug: "maya",
+    description: "A beginner focusing on stress relief, flexibility, and mindfulness.",
+    age: 27,
+    needs: ["Stress reduction", "Flexibility", "Self-care"],
+    classes: ["Yoga", "Meditation", "Breathwork"]
+  }
+  
 ];
 
 // Get character slugs as an array
