@@ -1,19 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Calendar } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 interface InteractiveMessageProps {
   content: string;
-  hasCalendarPermission: boolean;
+  hasCalendarPermission?: boolean;
   onRequestCalendarPermission?: () => void;
 }
 
-export default function InteractiveMessage({ 
-  content, 
-  hasCalendarPermission, 
-  onRequestCalendarPermission 
+export default function InteractiveMessage({
+  content,
 }: InteractiveMessageProps) {
   const [isClient, setIsClient] = useState(false);
 
@@ -28,24 +24,16 @@ export default function InteractiveMessage({
 
   // Function to render content with interactive components
   const renderContent = (text: string) => {
-    // Split content by interactive component markers
-    const parts = text.split(/(\[CALENDAR_BUTTON\]|\[CONNECT_CALENDAR\]|```[\s\S]*?```)/);
-    
+    // Remove calendar button markers since we use dummy calendar
+    const cleanedText = text
+      .replace(/\[CALENDAR_BUTTON\]/g, '')
+      .replace(/\[CONNECT_CALENDAR\]/g, '');
+
+    // Split content by code block markers
+    const parts = cleanedText.split(/(```[\s\S]*?```)/);
+
     return parts.map((part, index) => {
-      if (part === '[CALENDAR_BUTTON]' || part === '[CONNECT_CALENDAR]') {
-        // Render calendar button component
-        return (
-          <div key={index} className="my-3">
-            <Button
-              variant="secondary"
-              onClick={onRequestCalendarPermission}
-            >
-              <Calendar className="w-4 h-4" />
-              {part === '[CONNECT_CALENDAR]' ? 'Grant Calendar Access' : 'Connect Calendar'}
-            </Button>
-          </div>
-        );
-      } else if (part.startsWith('```') && part.endsWith('```')) {
+      if (part.startsWith('```') && part.endsWith('```')) {
         // Code block rendering
         const codeContent = part.slice(3, -3).trim();
         const lines = codeContent.split('\n');

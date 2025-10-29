@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useChat as useChatContext, ChatMessage } from "@/contexts/ChatContext";
 import ChatInput from "./ChatInput";
 import Sidebar from "./sidebar";
+import CalendarSidebar from "./CalendarSidebar";
 import LoadingSteps from "./LoadingSteps";
 import MessageContent from "./MessageContent";
 import {
@@ -29,8 +30,7 @@ export default function ChatInterface({
   chatId,
   initialMessages = [],
 }: ChatInterfaceProps) {
-  const { hasCalendarPermission, session, requestCalendarPermission } =
-    useAuth();
+  const { session } = useAuth();
   const {
     currentSessionId,
     isMessagesLoading,
@@ -129,98 +129,6 @@ export default function ChatInterface({
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
         <div className="flex-1 flex flex-col overflow-hidden relative">
-          {/* Calendar Status Banner */}
-          <div
-            className={`border-b border-border p-3 flex items-center justify-between ${
-              hasCalendarPermission
-                ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
-                : "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800"
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              {/* Calendar Icon */}
-              <div
-                className={`p-2 rounded-full ${
-                  hasCalendarPermission
-                    ? "bg-green-100 dark:bg-green-900/30"
-                    : "bg-blue-100 dark:bg-blue-900/30"
-                }`}
-              >
-                <Image
-                  src="/images/calendar.png"
-                  alt="Google Calendar"
-                  width={20}
-                  height={20}
-                  className="w-5 h-5"
-                />
-              </div>
-
-              {/* Status Text */}
-              <div className="flex flex-col">
-                <span
-                  className={`text-sm font-medium ${
-                    hasCalendarPermission
-                      ? "text-green-800 dark:text-green-200"
-                      : "text-blue-800 dark:text-blue-200"
-                  }`}
-                >
-                  {hasCalendarPermission
-                    ? "Google Calendar Connected"
-                    : "Connect Google Calendar"}
-                </span>
-                <span
-                  className={`text-xs ${
-                    hasCalendarPermission
-                      ? "text-green-600 dark:text-green-400"
-                      : "text-blue-600 dark:text-blue-400"
-                  }`}
-                >
-                  {hasCalendarPermission
-                    ? "Ask about your schedule for personalized wellness guidance!"
-                    : "Get personalized wellness guidance based on your schedule"}
-                </span>
-              </div>
-            </div>
-
-            {/* Action Button */}
-            <div className="flex items-center gap-2">
-              {hasCalendarPermission ? (
-                <div className="flex items-center gap-1">
-                  <svg
-                    className="w-4 h-4 text-green-600 dark:text-green-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  <span className="text-xs text-green-600 dark:text-green-400 font-medium">
-                    Connected
-                  </span>
-                </div>
-              ) : (
-                <button
-                  onClick={requestCalendarPermission}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors duration-200"
-                >
-                  <Image
-                    src="/images/calendar.png"
-                    alt="Google Calendar"
-                    width={16}
-                    height={16}
-                    className="w-4 h-4"
-                  />
-                  Connect
-                </button>
-              )}
-            </div>
-          </div>
-
           {/* Messages Container with Conversation Component */}
           <Conversation className="flex-1 w-full max-w-5xl mx-auto">
             <ConversationContent className="space-y-4">
@@ -305,12 +213,6 @@ export default function ChatInterface({
                                 <MessageContentWrapper variant="contained">
                                   <MessageContent
                                     content={part.text}
-                                    hasCalendarPermission={
-                                      hasCalendarPermission
-                                    }
-                                    onRequestCalendarPermission={
-                                      requestCalendarPermission
-                                    }
                                   />
                                 </MessageContentWrapper>
                               </Message>
@@ -466,13 +368,14 @@ export default function ChatInterface({
             setInput={setInput}
             onSendMessage={sendMessage}
             isStreaming={status === "streaming"}
-            hasCalendarPermission={hasCalendarPermission}
-            onRequestCalendarPermission={requestCalendarPermission}
             messages={messages}
             handleQuickPrompt={(prompt: string) => setInput(prompt)}
           />
         </div>
       </div>
+
+      {/* Calendar Sidebar */}
+      <CalendarSidebar />
     </div>
   );
 }

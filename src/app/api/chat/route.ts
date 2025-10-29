@@ -7,14 +7,13 @@ import {
   stepCountIs,
   smoothStream,
 } from "ai";
-import { googleCalendarService } from "@/lib/google-calendar";
 import {
   searchUserMemories,
   formatMemoriesForContext,
 } from "@/lib/mem0";
 import { generateSessionId, saveUIMessage } from "@/lib/database";
 import { supabase } from "@/lib/supabase";
-import { calendarTools } from "@/lib/calendar-tools";
+import { dummyCalendarTools } from "@/lib/dummy-calendar-tools";
 import { memoryTools } from "@/lib/memory-tools";
 
 export const maxDuration = 30;
@@ -37,11 +36,6 @@ export async function POST(req: Request) {
   if (!currentSessionId) {
     currentSessionId = generateSessionId();
   }
-
-  // Check if user has calendar permissions
-  const hasCalendarAccess =
-    session?.user?.user_metadata?.calendar_permission_granted ||
-    session?.provider_token;
 
   // Helper function to extract text from UIMessage
   const getMessageText = (message: UIMessage): string => {
@@ -75,14 +69,6 @@ export async function POST(req: Request) {
     // Continue without context if there's an error
   }
 
-  // Configure tools based on calendar access
-  const hasCalendarTools = hasCalendarAccess;
-
-  // Set session for calendar service if user has access
-  if (hasCalendarTools) {
-    googleCalendarService.setSession(session);
-  }
-
   const result = streamText({
     model: geminiModel,
     messages: convertToModelMessages(messages),
@@ -109,11 +95,7 @@ Always use MEMORIES for personal details (name, education, habits, etc.).
 If the user asks about their info, check MEMORIES first and respond from there.
 
 Calendar Access:
-${
-  hasCalendarTools
-    ? "You can access the user's Google Calendar via: getTodayEvents, getUpcomingEvents (days), searchCalendarEvents (keyword), getEventsInRange (date range), Use these automatically when users mention meetings or schedules. After checking events, suggest wellness breaks, meditation slots, or stress-relief moments."
-    : "If the user asks about their calendar, include [CALENDAR_BUTTON] to connect their calendar for personalized planning."
-}
+You can access the user's calendar via: getTodayEvents, getUpcomingEvents (days), searchCalendarEvents (keyword), getEventsInRange (date range). Use these automatically when users mention meetings or schedules. After checking events, suggest wellness breaks, meditation slots, or stress-relief moments.
 
 Reminder:
 SIA supports wellness, not professional medical advice.
@@ -124,10 +106,8 @@ IMPORTANT: When users share personal information, preferences, goals, or importa
 use the saveMemory tool to store this information for future conversations. This helps create a personalized experience.
 
 Your User ID for saving memories: ${userId}`,
-    // Include calendar tools if user has access, always include memory tools
-    tools: hasCalendarTools
-      ? { ...calendarTools, ...memoryTools }
-      : memoryTools,
+    // Include dummy calendar tools and memory tools
+    tools: { ...dummyCalendarTools, ...memoryTools },
     stopWhen: stepCountIs(7),
     experimental_transform: smoothStream({
       delayInMs: 30,
