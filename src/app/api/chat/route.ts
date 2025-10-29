@@ -23,7 +23,8 @@ export async function POST(req: Request) {
     messages,
     session,
     sessionId,
-  }: { messages: UIMessage[]; session: any; sessionId?: string } =
+    personaId,
+  }: { messages: UIMessage[]; session: any; sessionId?: string; personaId?: string } =
     await req.json();
 
   let memoryContext = "";
@@ -47,22 +48,25 @@ export async function POST(req: Request) {
 
   // Get user ID and load memories
   try {
-    if (session?.user?.id) {
+    // Use persona ID if provided, otherwise fall back to session user ID
+    if (personaId) {
+      userId = personaId;
+    } else if (session?.user?.id) {
       userId = session.user.id;
+    }
 
+    if (userId) {
       // Search for relevant memories from Mem0 - use broader search terms
       const lastMessage = getMessageText(messages[messages.length - 1]) || "";
       const searchQuery =
         lastMessage ||
         "user information personal details education routine schedule";
 
-      if (userId) {
-        const memories = await searchUserMemories(userId, searchQuery);
-        memoryContext = formatMemoriesForContext(memories);
+      const memories = await searchUserMemories(userId, searchQuery);
+      memoryContext = formatMemoriesForContext(memories);
 
-        console.log({ memoryContext });
-        console.log("Found memories for user:", memories.length);
-      }
+      console.log({ memoryContext });
+      console.log("Found memories for user:", memories.length);
     }
   } catch (error) {
     console.error("Error retrieving memories:", error);

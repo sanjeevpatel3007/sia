@@ -1,96 +1,32 @@
-'use client'
-import React from 'react'
-import Image from 'next/image'
-import { useAuth } from '@/contexts/AuthContext'
-import { useEffect, useState, useRef } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { X } from 'lucide-react'
-import TypewriterText from '@/components/TypewriterText'
-
-
+"use client";
+import React from "react";
+import Image from "next/image";
+import { useRef } from "react";
+import TypewriterText from "@/components/TypewriterText";
+import PersonaCards from "@/components/PersonaCards";
 import { useRouter } from "next/navigation";
+import { usePersona } from "@/contexts/PersonaContext";
 
 export default function Home() {
-  const { user, signInWithGoogle, signOut } = useAuth();
-  const [notification, setNotification] = useState<{
-    type: "success" | "error";
-    message: string;
-  } | null>(null);
-  const hasProcessedUrl = useRef(false);
+  const personaCardsRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-
-  useEffect(() => {
-    if (hasProcessedUrl.current) return;
-
-    // Check for URL parameters to show notifications
-    const urlParams = new URLSearchParams(window.location.search);
-    const calendarPermission = urlParams.get("calendar_permission");
-    const error = urlParams.get("error");
-
-    if (calendarPermission === "success") {
-      // Use setTimeout to defer state update
-      setTimeout(() => {
-        setNotification({
-          type: "success",
-          message:
-            "Calendar permission granted successfully! You can now access your Google Calendar through SIA.",
-        });
-      }, 0);
-      // Clean up URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-      hasProcessedUrl.current = true;
-    } else if (error === "calendar_permission_failed") {
-      // Use setTimeout to defer state update
-      setTimeout(() => {
-        setNotification({
-          type: "error",
-          message: "Failed to grant calendar permission. Please try again.",
-        });
-      }, 0);
-      // Clean up URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-      hasProcessedUrl.current = true;
-    }
-  }, []);
+  const { currentPersona } = usePersona();
 
   const handleTalkWithSIA = () => {
-    if (user) {
+    if (currentPersona) {
+      // Persona already selected, go to chat
       router.push("/chat");
     } else {
-      // User not authenticated, trigger Google OAuth redirect
-      signInWithGoogle();
+      // No persona selected, scroll to persona cards
+      personaCardsRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
     }
   };
 
   return (
     <div className="w-full min-h-screen relative bg-[#F7F5F3] overflow-x-hidden flex flex-col justify-start items-center">
-      {/* Notification */}
-      {notification && (
-        <Card
-          className={`fixed top-4 right-4 z-50 max-w-md ${
-            notification.type === "success"
-              ? "border-primary bg-primary/10"
-              : "border-destructive bg-destructive/10"
-          }`}
-        >
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">
-                {notification.message}
-              </span>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => setNotification(null)}
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       <div className="relative flex flex-col justify-start items-center w-full">
         {/* Main container with proper margins */}
         <div className="w-full max-w-none px-4 sm:px-6 md:px-8 lg:px-0 lg:max-w-[1060px] lg:w-[1060px] relative flex flex-col justify-start items-start min-h-screen">
@@ -125,21 +61,13 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
-                <div className="h-6 sm:h-7 md:h-8 flex justify-start items-start gap-2 sm:gap-3 relative z-50 pointer-events-auto">
-                  <button
-                    onClick={() => (user ? signOut() : signInWithGoogle())}
-                    className={`px-2 sm:px-3 md:px-[14px] py-1 sm:py-[6px] overflow-hidden rounded-full flex justify-center items-center cursor-pointer shadow-[0px_1px_2px_rgba(55,50,47,0.12)] transition-colors relative z-[140] pointer-events-auto ${
-                      user
-                        ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        : "bg-white text-secondary hover:bg-white/90"
-                    }`}
-                    aria-label={user ? "Log out" : "Log in"}
-                  >
-                    <span className="flex flex-col justify-center text-xs md:text-[13px] font-medium leading-5 font-sans">
-                      {user ? "Log out" : "Log in"}
+                {currentPersona && (
+                  <div className="h-6 sm:h-7 md:h-8 flex justify-start items-center gap-2 relative z-50 pointer-events-auto">
+                    <span className="text-xs text-secondary/70 font-medium">
+                      {currentPersona.name}
                     </span>
-                  </button>
-                </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -153,10 +81,10 @@ export default function Home() {
                     For Life.
                   </div>
                   <div className="w-full max-w-[506.08px] lg:w-[506.08px] text-center flex justify-center flex-col text-secondary/80 sm:text-lg md:text-2xl leading-[1.4] sm:leading-[1.45] md:leading-normal lg:leading-7 font-sans px-2 sm:px-4 md:px-0 lg:text-lg font-medium text-sm">
-                    <TypewriterText 
+                    <TypewriterText
                       texts={[
-                        "Personalized with Google Calendar",
-                        "AI-powered memory for tailored guidance"
+                        "Personalized wellness journeys for every lifestyle",
+                        "AI-powered memory for tailored guidance",
                       ]}
                       speed={80}
                       pauseTime={3000}
@@ -181,7 +109,7 @@ export default function Home() {
                   >
                     <div className="w-20 sm:w-24 md:w-28 lg:w-44 h-[41px] absolute left-0 top-[-0.5px] bg-linear-to-b from-[rgba(255,255,255,0)] to-[rgba(0,0,0,0.10)] mix-blend-multiply pointer-events-none"></div>
                     <span className="flex flex-col justify-center text-white text-sm sm:text-base md:text-[15px] font-medium leading-5 font-sans">
-                      💬 Talk with SIA
+                      💬 {currentPersona ? "Continue Chat" : "Choose Persona"}
                     </span>
                   </button>
                 </div>
@@ -193,11 +121,11 @@ export default function Home() {
                   </div>
 
                   <div className="flex items-center justify-center gap-4 sm:gap-6">
-                    {/* Google Calendar Icon */}
+                    {/* Calendar Icon */}
                     <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-secondary/20">
                       <Image
                         src="/images/calendar.png"
-                        alt="Google Calendar"
+                        alt="Calendar"
                         width={24}
                         height={24}
                         className="w-6 h-6"
@@ -257,6 +185,11 @@ export default function Home() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Persona Selection Section */}
+      <div className="w-full bg-white/50 backdrop-blur-sm py-16">
+        <PersonaCards />
       </div>
     </div>
   );

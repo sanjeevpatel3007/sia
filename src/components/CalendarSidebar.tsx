@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Calendar, Clock, MapPin } from "lucide-react";
 import { dummyCalendarService } from "@/lib/dummy-calendar";
+import { usePersona } from "@/contexts/PersonaContext";
 
 interface CalendarEvent {
   summary: string;
@@ -19,8 +20,16 @@ interface CalendarEvent {
 }
 
 export default function CalendarSidebar() {
+  const { currentPersona } = usePersona();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
+
+  // Set the persona for the dummy calendar service
+  useEffect(() => {
+    if (currentPersona) {
+      dummyCalendarService.setPersona(currentPersona.id);
+    }
+  }, [currentPersona]);
 
   // Get current month and year
   const currentMonth = currentDate.getMonth();

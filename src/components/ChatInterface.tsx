@@ -5,6 +5,7 @@ import { useChat as useVercelChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePersona } from "@/contexts/PersonaContext";
 import { useChat as useChatContext, ChatMessage } from "@/contexts/ChatContext";
 import ChatInput from "./ChatInput";
 import Sidebar from "./sidebar";
@@ -31,6 +32,7 @@ export default function ChatInterface({
   initialMessages = [],
 }: ChatInterfaceProps) {
   const { session } = useAuth();
+  const { currentPersona } = usePersona();
   const {
     currentSessionId,
     isMessagesLoading,
@@ -100,7 +102,7 @@ export default function ChatInterface({
   ]);
 
   const sendMessage = async () => {
-    if (!input.trim() || !session?.user?.id) return;
+    if (!input.trim() || !currentPersona?.id) return;
 
     const userInput = input;
     setInput("");
@@ -116,6 +118,7 @@ export default function ChatInterface({
         body: {
           session: session,
           sessionId: sessionIdToUse,
+          personaId: currentPersona.id,
         },
       }
     );
