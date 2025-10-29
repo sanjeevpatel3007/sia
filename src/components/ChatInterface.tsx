@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useChat as useVercelChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
+import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChat as useChatContext, ChatMessage } from "@/contexts/ChatContext";
 import ChatInput from "./ChatInput";
@@ -145,23 +146,13 @@ export default function ChatInterface({
                     : "bg-blue-100 dark:bg-blue-900/30"
                 }`}
               >
-                <svg
-                  className={`w-5 h-5 ${
-                    hasCalendarPermission
-                      ? "text-green-600 dark:text-green-400"
-                      : "text-blue-600 dark:text-blue-400"
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
+                <Image
+                  src="/images/calendar.png"
+                  alt="Google Calendar"
+                  width={20}
+                  height={20}
+                  className="w-5 h-5"
+                />
               </div>
 
               {/* Status Text */}
@@ -217,19 +208,13 @@ export default function ChatInterface({
                   onClick={requestCalendarPermission}
                   className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors duration-200"
                 >
-                  <svg
+                  <Image
+                    src="/images/calendar.png"
+                    alt="Google Calendar"
+                    width={16}
+                    height={16}
                     className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-                    />
-                  </svg>
+                  />
                   Connect
                 </button>
               )}
@@ -248,86 +233,182 @@ export default function ChatInterface({
                 </div>
               ) : (
                 <>
-                  {messages.map((msg: any, idx: number) => (
-                    <div key={msg.id || idx} className="space-y-0">
-                      {msg.parts.map((part: any, partIdx: number) => {
-                        const isToolPart =
-                          typeof part.type === "string" &&
-                          part.type.startsWith("tool-") &&
-                          "state" in part;
+                  {messages.length === 1 && (
+                    <div className="flex flex-col items-center justify-center h-[40vh] relative w-full">
+                      <div className="absolute inset-0 pointer-events-none opacity-60 bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-accent/10 via-background to-background"></div>
+                      <div className="relative z-10 bg-card/60 backdrop-blur-sm border border-border rounded-2xl p-6 sm:p-8 max-w-xl w-full text-center space-y-4">
+                        <div className="flex items-center justify-center gap-3">
+                          <Image
+                            src="/images/calendar.png"
+                            alt="Google Calendar"
+                            width={28}
+                            height={28}
+                            className="w-7 h-7"
+                          />
+                          <span className="text-sm text-muted-foreground">
+                            Personalized by your Google Calendar and memory
+                          </span>
+                        </div>
+                        <h2 className="text-xl font-semibold">
+                          Start a new conversation
+                        </h2>
+                        <p className="text-sm text-muted-foreground">
+                          Ask anything. If connected, Ill use your schedule. I
+                          also remember preferences to tailor guidance.
+                        </p>
+                        <div className="flex flex-wrap gap-2 justify-center">
+                          <button
+                            onClick={() =>
+                              setInput("Plan my day for energy and focus")
+                            }
+                            className="px-3 py-1.5 text-xs rounded-full border border-border hover:bg-muted transition-colors"
+                          >
+                            Plan my day
+                          </button>
+                          <button
+                            onClick={() =>
+                              setInput("Suggest a 10-min breathing routine now")
+                            }
+                            className="px-3 py-1.5 text-xs rounded-full border border-border hover:bg-muted transition-colors"
+                          >
+                            Breathing routine
+                          </button>
+                          <button
+                            onClick={() =>
+                              setInput("Whats on my calendar this afternoon?")
+                            }
+                            className="px-3 py-1.5 text-xs rounded-full border border-border hover:bg-muted transition-colors"
+                          >
+                            Todays schedule
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
-                        // Render text parts inside Message UI
-                        if (part.type === "text") {
-                          return (
-                            <Message
-                              key={`${msg.id || idx}-${partIdx}`}
-                              from={msg.role}
-                            >
-                              <MessageContentWrapper variant="contained">
-                                <MessageContent
-                                  content={part.text}
-                                  hasCalendarPermission={hasCalendarPermission}
-                                  onRequestCalendarPermission={
-                                    requestCalendarPermission
-                                  }
-                                />
-                              </MessageContentWrapper>
-                            </Message>
-                          );
-                        }
+                  {messages.length > 0 &&
+                    messages.map((msg: any, idx: number) => (
+                      <div key={msg.id || idx} className="space-y-0">
+                        {msg.parts.map((part: any, partIdx: number) => {
+                          const isToolPart =
+                            typeof part.type === "string" &&
+                            part.type.startsWith("tool-") &&
+                            "state" in part;
 
-                        // Render tool invocations inside Message UI
-                        if (isToolPart) {
-                          const toolName = part.type.replace("tool-", "");
-                          const toolPart = part as any;
+                          // Render text parts inside Message UI
+                          if (part.type === "text") {
+                            return (
+                              <Message
+                                key={`${msg.id || idx}-${partIdx}`}
+                                from={msg.role}
+                              >
+                                <MessageContentWrapper variant="contained">
+                                  <MessageContent
+                                    content={part.text}
+                                    hasCalendarPermission={
+                                      hasCalendarPermission
+                                    }
+                                    onRequestCalendarPermission={
+                                      requestCalendarPermission
+                                    }
+                                  />
+                                </MessageContentWrapper>
+                              </Message>
+                            );
+                          }
 
-                          // Check if this is a memory tool
-                          const isMemoryTool = toolName === "saveMemory" || toolName === "saveConversationMemories";
+                          // Render tool invocations inside Message UI
+                          if (isToolPart) {
+                            const toolName = part.type.replace("tool-", "");
+                            const toolPart = part as any;
 
-                          return (
-                            <Message
-                              key={`${msg.id || idx}-${partIdx}`}
-                              from={msg.role}
-                            >
-                              <MessageContentWrapper variant="flat">
-                                <div className="flex w-full p-3 sm:p-4 rounded-lg border border-border bg-muted">
-                                  {/* Input Streaming State */}
-                                  {toolPart.state === "input-streaming" && (
-                                    <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                                      <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
-                                      <span>
-                                        {isMemoryTool
-                                          ? "Preparing to save memory..."
-                                          : "Preparing to access calendar..."}
-                                      </span>
-                                    </div>
-                                  )}
+                            // Check if this is a memory tool
+                            const isMemoryTool =
+                              toolName === "saveMemory" ||
+                              toolName === "saveConversationMemories";
 
-                                  {/* Input Available State */}
-                                  {toolPart.state === "input-available" && (
-                                    <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                                      <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
-                                      <span>
-                                        {toolName === "getTodayEvents" &&
-                                          "Fetching today's schedule..."}
-                                        {toolName === "getUpcomingEvents" &&
-                                          "Fetching upcoming events..."}
-                                        {toolName === "searchCalendarEvents" &&
-                                          `Searching calendar for "${toolPart.input?.query}"...`}
-                                        {toolName === "getEventsInRange" &&
-                                          "Fetching events in date range..."}
-                                        {toolName === "saveMemory" &&
-                                          "Saving important information..."}
-                                        {toolName === "saveConversationMemories" &&
-                                          "Extracting conversation memories..."}
-                                      </span>
-                                    </div>
-                                  )}
+                            return (
+                              <Message
+                                key={`${msg.id || idx}-${partIdx}`}
+                                from={msg.role}
+                              >
+                                <MessageContentWrapper variant="flat">
+                                  <div className="flex w-full p-3 sm:p-4 rounded-lg border border-border bg-muted">
+                                    {/* Input Streaming State */}
+                                    {toolPart.state === "input-streaming" && (
+                                      <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                                        <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
+                                        <span>
+                                          {isMemoryTool
+                                            ? "Preparing to save memory..."
+                                            : "Preparing to access calendar..."}
+                                        </span>
+                                      </div>
+                                    )}
 
-                                  {/* Output Available State */}
-                                  {toolPart.state === "output-available" && (
-                                    <div className="space-y-2">
-                                      <div className="flex items-center gap-2 text-primary text-sm font-medium">
+                                    {/* Input Available State */}
+                                    {toolPart.state === "input-available" && (
+                                      <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                                        <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
+                                        <span>
+                                          {toolName === "getTodayEvents" &&
+                                            "Fetching today's schedule..."}
+                                          {toolName === "getUpcomingEvents" &&
+                                            "Fetching upcoming events..."}
+                                          {toolName ===
+                                            "searchCalendarEvents" &&
+                                            `Searching calendar for "${toolPart.input?.query}"...`}
+                                          {toolName === "getEventsInRange" &&
+                                            "Fetching events in date range..."}
+                                          {toolName === "saveMemory" &&
+                                            "Saving memory..."}
+                                          {toolName ===
+                                            "saveConversationMemories" &&
+                                            "Extracting conversation memories..."}
+                                        </span>
+                                      </div>
+                                    )}
+
+                                    {/* Output Available State */}
+                                    {toolPart.state === "output-available" && (
+                                      <div className="space-y-2">
+                                        <div className="flex items-center gap-2 text-primary text-sm font-medium">
+                                          <svg
+                                            className="w-4 h-4"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                          >
+                                            <path
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                              strokeWidth={2}
+                                              d="M5 13l4 4L19 7"
+                                            />
+                                          </svg>
+                                          <span>
+                                            {isMemoryTool
+                                              ? "Memory saved"
+                                              : "Calendar data retrieved"}
+                                          </span>
+                                        </div>
+                                        {toolPart.output?.events?.length >
+                                          0 && (
+                                          <div className="text-xs text-muted-foreground">
+                                            Found{" "}
+                                            {toolPart.output.events.length}{" "}
+                                            event
+                                            {toolPart.output.events.length > 1
+                                              ? "s"
+                                              : ""}
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {/* Output Error State */}
+                                    {toolPart.state === "output-error" && (
+                                      <div className="flex items-center gap-2 text-destructive text-sm">
                                         <svg
                                           className="w-4 h-4"
                                           fill="none"
@@ -338,60 +419,26 @@ export default function ChatInterface({
                                             strokeLinecap="round"
                                             strokeLinejoin="round"
                                             strokeWidth={2}
-                                            d="M5 13l4 4L19 7"
+                                            d="M6 18L18 6M6 6l12 12"
                                           />
                                         </svg>
                                         <span>
                                           {isMemoryTool
-                                            ? "Memory saved"
-                                            : "Calendar data retrieved"}
+                                            ? "Failed to save memory"
+                                            : "Failed to access calendar"}
                                         </span>
                                       </div>
-                                      {toolPart.output?.events?.length > 0 && (
-                                        <div className="text-xs text-muted-foreground">
-                                          Found {toolPart.output.events.length}{" "}
-                                          event
-                                          {toolPart.output.events.length > 1
-                                            ? "s"
-                                            : ""}
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
+                                    )}
+                                  </div>
+                                </MessageContentWrapper>
+                              </Message>
+                            );
+                          }
 
-                                  {/* Output Error State */}
-                                  {toolPart.state === "output-error" && (
-                                    <div className="flex items-center gap-2 text-destructive text-sm">
-                                      <svg
-                                        className="w-4 h-4"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                      >
-                                        <path
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                          strokeWidth={2}
-                                          d="M6 18L18 6M6 6l12 12"
-                                        />
-                                      </svg>
-                                      <span>
-                                        {isMemoryTool
-                                          ? "Failed to save memory"
-                                          : "Failed to access calendar"}
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-                              </MessageContentWrapper>
-                            </Message>
-                          );
-                        }
-
-                        return null;
-                      })}
-                    </div>
-                  ))}
+                          return null;
+                        })}
+                      </div>
+                    ))}
 
                   {/* Show loading when submitted OR when streaming but last message has no content yet */}
                   {(status === "submitted" ||

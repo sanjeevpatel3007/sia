@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
@@ -170,6 +171,55 @@ export default function Home() {
                       💬 Talk with SIA
                     </span>
                   </button>
+                </div>
+
+                {/* Features Section */}
+                <div className="w-full max-w-[600px] flex flex-col items-center gap-4 sm:gap-6">
+                  <div className="text-center text-secondary/70 text-sm sm:text-base font-medium">
+                    Smart Personalization with Calendar & Memory
+                  </div>
+
+                  <div className="flex items-center justify-center gap-4 sm:gap-6">
+                    {/* Google Calendar Icon */}
+                    <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-secondary/20">
+                      <Image
+                        src="/images/calendar.png"
+                        alt="Google Calendar"
+                        width={24}
+                        height={24}
+                        className="w-6 h-6"
+                      />
+                      <span className="text-xs sm:text-sm font-medium text-secondary">
+                        Calendar
+                      </span>
+                    </div>
+
+                    {/* Memory Icon */}
+                    <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-secondary/20">
+                      <svg
+                        className="w-6 h-6 text-secondary"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                        />
+                      </svg>
+                      <span className="text-xs sm:text-sm font-medium text-secondary">
+                        AI Memory
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="text-center text-secondary/60 text-xs sm:text-sm max-w-[500px]">
+                    Get personalized wellness guidance based on your schedule
+                    and remember your preferences for a truly tailored
+                    experience.
+                  </div>
                 </div>
               </div>
 
