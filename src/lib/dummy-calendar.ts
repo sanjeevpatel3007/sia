@@ -1,7 +1,9 @@
 /**
  * Dummy Calendar Service
- * Returns Sama Studio wellness schedule for showcase purposes
+ * Returns Sama Studio wellness schedule and persona-based schedules for showcase purposes
  */
+
+import { personas, getPersonaById, type Persona } from "./persona-calendars";
 
 interface DummyEvent {
   summary: string;
@@ -17,6 +19,8 @@ interface DummyEvent {
   description?: string;
   attendees?: Array<{ email: string }>;
 }
+
+type CalendarType = "sama-studio" | "persona";
 
 // Sama Studio monthly schedule template
 // This template repeats every month
@@ -132,6 +136,23 @@ const samaStudioSchedule = [
 ];
 
 class DummyCalendarService {
+  private currentPersonaId: string | null = null;
+
+  /**
+   * Set the current persona for calendar events
+   */
+  setPersona(personaId: string | null) {
+    this.currentPersonaId = personaId;
+  }
+
+  /**
+   * Get the current persona
+   */
+  getCurrentPersona(): Persona | null {
+    if (!this.currentPersonaId) return null;
+    return getPersonaById(this.currentPersonaId) || null;
+  }
+
   /**
    * Generate events for a specific date range based on the template
    */
@@ -139,11 +160,19 @@ class DummyCalendarService {
     const events: DummyEvent[] = [];
     const currentDate = new Date(startDate);
 
+    // Determine which schedule to use
+    const persona = this.getCurrentPersona();
+    const schedule = persona ? persona.schedule : samaStudioSchedule;
+    const location = persona ? "Personal Schedule" : "Sama Studio";
+    const descriptionPrefix = persona
+      ? `${persona.name}'s activity`
+      : "Wellness activity at Sama Studio";
+
     while (currentDate <= endDate) {
       const dayOfMonth = currentDate.getDate();
 
       // Find all activities for this day from the template
-      const dayActivities = samaStudioSchedule.filter(
+      const dayActivities = schedule.filter(
         (item) => item.day === dayOfMonth
       );
 
@@ -158,12 +187,14 @@ class DummyCalendarService {
         const eventEnd = new Date(currentDate);
         eventEnd.setHours(endHour, endMinute, 0, 0);
 
+        const eventName = "activity" in activity ? activity.activity : activity.event;
+
         events.push({
-          summary: activity.activity,
+          summary: eventName,
           start: { dateTime: eventStart.toISOString() },
           end: { dateTime: eventEnd.toISOString() },
-          location: "Sama Studio",
-          description: `Wellness activity at Sama Studio - ${activity.activity}`,
+          location,
+          description: `${descriptionPrefix} - ${eventName}`,
         });
       });
 
@@ -249,6 +280,20 @@ class DummyCalendarService {
 
     return this.generateEvents(startDate, endDate);
   }
+
+  /**
+   * Get all available personas
+   */
+  getAvailablePersonas() {
+    return personas.map((p) => ({
+      id: p.id,
+      name: p.name,
+      description: p.description,
+    }));
+  }
 }
 
 export const dummyCalendarService = new DummyCalendarService();
+
+// Export persona utilities
+export { personas, getPersonaById } from "./persona-calendars";
