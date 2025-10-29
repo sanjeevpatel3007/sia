@@ -120,7 +120,6 @@ export default function ChatInterface({
     );
   };
 
-
   return (
     <div className="flex h-[calc(100vh-4rem)]">
       {/* Sidebar */}
@@ -130,23 +129,27 @@ export default function ChatInterface({
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
         <div className="flex-1 flex flex-col overflow-hidden relative">
           {/* Calendar Status Banner */}
-          <div className={`border-b border-border p-3 flex items-center justify-between ${
-            hasCalendarPermission 
-              ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800' 
-              : 'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800'
-          }`}>
+          <div
+            className={`border-b border-border p-3 flex items-center justify-between ${
+              hasCalendarPermission
+                ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
+                : "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800"
+            }`}
+          >
             <div className="flex items-center gap-3">
               {/* Calendar Icon */}
-              <div className={`p-2 rounded-full ${
-                hasCalendarPermission 
-                  ? 'bg-green-100 dark:bg-green-900/30' 
-                  : 'bg-blue-100 dark:bg-blue-900/30'
-              }`}>
+              <div
+                className={`p-2 rounded-full ${
+                  hasCalendarPermission
+                    ? "bg-green-100 dark:bg-green-900/30"
+                    : "bg-blue-100 dark:bg-blue-900/30"
+                }`}
+              >
                 <svg
                   className={`w-5 h-5 ${
-                    hasCalendarPermission 
-                      ? 'text-green-600 dark:text-green-400' 
-                      : 'text-blue-600 dark:text-blue-400'
+                    hasCalendarPermission
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-blue-600 dark:text-blue-400"
                   }`}
                   fill="none"
                   stroke="currentColor"
@@ -160,32 +163,34 @@ export default function ChatInterface({
                   />
                 </svg>
               </div>
-              
+
               {/* Status Text */}
               <div className="flex flex-col">
-                <span className={`text-sm font-medium ${
-                  hasCalendarPermission 
-                    ? 'text-green-800 dark:text-green-200' 
-                    : 'text-blue-800 dark:text-blue-200'
-                }`}>
-                  {hasCalendarPermission 
-                    ? 'Google Calendar Connected' 
-                    : 'Connect Google Calendar'
-                  }
+                <span
+                  className={`text-sm font-medium ${
+                    hasCalendarPermission
+                      ? "text-green-800 dark:text-green-200"
+                      : "text-blue-800 dark:text-blue-200"
+                  }`}
+                >
+                  {hasCalendarPermission
+                    ? "Google Calendar Connected"
+                    : "Connect Google Calendar"}
                 </span>
-                <span className={`text-xs ${
-                  hasCalendarPermission 
-                    ? 'text-green-600 dark:text-green-400' 
-                    : 'text-blue-600 dark:text-blue-400'
-                }`}>
-                  {hasCalendarPermission 
-                    ? 'Ask about your schedule for personalized wellness guidance!' 
-                    : 'Get personalized wellness guidance based on your schedule'
-                  }
+                <span
+                  className={`text-xs ${
+                    hasCalendarPermission
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-blue-600 dark:text-blue-400"
+                  }`}
+                >
+                  {hasCalendarPermission
+                    ? "Ask about your schedule for personalized wellness guidance!"
+                    : "Get personalized wellness guidance based on your schedule"}
                 </span>
               </div>
             </div>
-            
+
             {/* Action Button */}
             <div className="flex items-center gap-2">
               {hasCalendarPermission ? (
@@ -367,8 +372,16 @@ export default function ChatInterface({
                     </div>
                   ))}
 
-                  {status === "submitted" && <LoadingSteps />}
-                  <div className="pb-24" />
+                  {/* Show loading when submitted OR when streaming but last message has no content yet */}
+                  {(status === "submitted" ||
+                    (status === "streaming" &&
+                      messages.length > 0 &&
+                      messages[messages.length - 1].role === "assistant" &&
+                      !messages[messages.length - 1].parts.some(
+                        (p: any) =>
+                          p.type === "text" && p.text.trim().length > 0
+                      ))) && <LoadingSteps />}
+                  <div className="pb-28" />
                 </>
               )}
             </ConversationContent>

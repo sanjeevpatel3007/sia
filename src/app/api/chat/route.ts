@@ -5,6 +5,7 @@ import {
   UIMessage,
   createIdGenerator,
   stepCountIs,
+  smoothStream,
 } from "ai";
 import { googleCalendarService } from "@/lib/google-calendar";
 import {
@@ -15,6 +16,8 @@ import {
 import { generateSessionId, saveUIMessage } from "@/lib/database";
 import { supabase } from "@/lib/supabase";
 import { calendarTools } from "@/lib/calendar-tools";
+
+export const maxDuration = 30;
 
 export async function POST(req: Request) {
   const {
@@ -48,25 +51,32 @@ export async function POST(req: Request) {
       .join(" ");
   };
 
-  // Get user ID and load memories
+  // Get user ID and load memories (with timeout to prevent blocking)
   try {
     if (session?.user?.id) {
       userId = session.user.id;
-      
+
       // Search for relevant memories from Mem0 - use broader search terms
-      const lastMessage = getMessageText(messages[messages.length - 1]) || '';
-      const searchQuery = lastMessage || 'user information personal details education routine schedule';
-      
+      const lastMessage = getMessageText(messages[messages.length - 1]) || "";
+      const searchQuery =
+        lastMessage ||
+        "user information personal details education routine schedule";
+
       if (userId) {
-        const memories = await searchUserMemories(userId, searchQuery);
+        // Add timeout to prevent memory loading from blocking too long
+        const memoriesPromise = searchUserMemories(userId, searchQuery);
+        const timeoutPromise = new Promise<any[]>((resolve) =>
+          setTimeout(() => resolve([]), 2000)
+        );
+
+        const memories = await Promise.race([memoriesPromise, timeoutPromise]);
         memoryContext = formatMemoriesForContext(memories);
-        
-        console.log('Found memories for user:', memories.length);
-        console.log('Memory context:', memoryContext);
+
+        console.log("Found memories for user:", memories.length);
       }
     }
   } catch (error) {
-    console.error('Error retrieving memories:', error);
+    console.error("Error retrieving memories:", error);
     // Continue without context if there's an error
   }
 
@@ -120,6 +130,10 @@ Remember: You're here to support their wellness journey, not to replace professi
       tools: calendarTools,
     }),
     stopWhen: stepCountIs(7),
+    experimental_transform: smoothStream({
+      delayInMs: 30,
+      chunking: "word",
+    }),
     onFinish: async ({ text }) => {
       // Save messages to database (both user and assistant)
       if (userId && currentSessionId) {
@@ -158,8 +172,8 @@ Remember: You're here to support their wellness journey, not to replace professi
           // Create a UIMessage from the text response
           const assistantUIMessage: UIMessage = {
             id: `msg-${Date.now()}`,
-            role: 'assistant',
-            parts: [{ type: 'text', text }],
+            role: "assistant",
+            parts: [{ type: "text", text }],
           };
           await saveUIMessage(assistantUIMessage, currentSessionId, userId);
 
@@ -171,31 +185,25 @@ Remember: You're here to support their wellness journey, not to replace professi
     },
   });
 
-  // Save to Mem0 for intelligent memory extraction
+  // Return UIMessage stream response IMMEDIATELY for streaming
+  // Save to Mem0 asynchronously without blocking the stream
   if (userId && messages.length > 0) {
-    try {
-      // SAVE TO MEM0 (Intelligent Memory Extraction)
-      // This will extract only relevant facts from the conversation
-      // From recent messages, it will store only important memories
-      const conversationForMemory = messages
-        .slice(-5)
-        .filter((msg) => msg.role === "user" || msg.role === "assistant")
-        .map((msg) => ({
-          role: msg.role as "user" | "assistant",
-          content: getMessageText(msg),
-        }));
-      addIntelligentMemories(userId, conversationForMemory).catch(error => {
-        console.error('Error saving intelligent memories:', error);
-      });
+    // Fire and forget - don't await this
+    const conversationForMemory = messages
+      .slice(-5)
+      .filter((msg) => msg.role === "user" || msg.role === "assistant")
+      .map((msg) => ({
+        role: msg.role as "user" | "assistant",
+        content: getMessageText(msg),
+      }));
 
-      console.log('Extracted memories to Mem0');
-    } catch (error) {
-      console.error('Error saving to Mem0:', error);
-    }
+    addIntelligentMemories(userId, conversationForMemory).catch((error) => {
+      console.error("Error saving intelligent memories:", error);
+    });
   }
 
   // Return UIMessage stream response with session ID and custom ID generator
-  const response = result.toUIMessageStreamResponse({
+  return result.toUIMessageStreamResponse({
     generateMessageId: createIdGenerator({
       prefix: "msg",
       size: 16,
@@ -204,6 +212,4 @@ Remember: You're here to support their wellness journey, not to replace professi
       "X-Session-ID": currentSessionId,
     },
   });
-
-  return response;
 }
