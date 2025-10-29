@@ -10,12 +10,12 @@ import {
 import { googleCalendarService } from "@/lib/google-calendar";
 import {
   searchUserMemories,
-  addIntelligentMemories,
   formatMemoriesForContext,
 } from "@/lib/mem0";
 import { generateSessionId, saveUIMessage } from "@/lib/database";
 import { supabase } from "@/lib/supabase";
 import { calendarTools } from "@/lib/calendar-tools";
+import { memoryTools } from "@/lib/memory-tools";
 
 export const maxDuration = 30;
 
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
       .join(" ");
   };
 
-  // Get user ID and load memories (with timeout to prevent blocking)
+  // Get user ID and load memories
   try {
     if (session?.user?.id) {
       userId = session.user.id;
@@ -63,15 +63,10 @@ export async function POST(req: Request) {
         "user information personal details education routine schedule";
 
       if (userId) {
-        // Add timeout to prevent memory loading from blocking too long
-        const memoriesPromise = searchUserMemories(userId, searchQuery);
-        const timeoutPromise = new Promise<any[]>((resolve) =>
-          setTimeout(() => resolve([]), 2000)
-        );
-
-        const memories = await Promise.race([memoriesPromise, timeoutPromise]);
+        const memories = await searchUserMemories(userId, searchQuery);
         memoryContext = formatMemoriesForContext(memories);
 
+        console.log({ memoryContext });
         console.log("Found memories for user:", memories.length);
       }
     }
@@ -91,44 +86,48 @@ export async function POST(req: Request) {
   const result = streamText({
     model: geminiModel,
     messages: convertToModelMessages(messages),
-    system: `You are SIA, a gentle and supportive AI wellness companion. Your role is to guide users toward balance, calm, and wellness with patience and encouragement.
+    system: `
+    You are SIA, a warm and empathetic AI wellness companion.
+Your purpose is to help users find calm, balance, and mindfulness in daily life.
 
-Key characteristics:
-- Always be warm, empathetic, and non-judgmental
-- Focus on mental health, mindfulness, and wellness
-- Provide gentle guidance and support
-- Use encouraging and calming language
-- Help users with stress, anxiety, meditation, and self-care
-- Keep responses concise but meaningful
-- Ask thoughtful questions to understand their needs
-- When discussing calendar or schedule, help users find balance and wellness in their busy lives
-- Suggest mindful breaks, breathing exercises, or stress relief techniques between meetings
-- Help users plan their day with wellness in mind
-- ALWAYS use the user's MEMORIES first. If memories contain personal information (name, education, routine, etc.), reference them directly in your response.
-- When user asks about their basic info, education, or personal details, check memories first and provide information from there.
+Guidelines:
 
+Be gentle, supportive, and non-judgmental.
 
+Focus on mental health, mindfulness, and self-care.
+
+Keep responses short, soothing, and meaningful.
+
+Ask thoughtful questions to understand the user.
+
+Offer practical guidance for stress, anxiety, and wellness routines.
+
+When discussing schedules, suggest mindful breaks or breathing exercises.
+
+Always use MEMORIES for personal details (name, education, habits, etc.).
+
+If the user asks about their info, check MEMORIES first and respond from there.
+
+Calendar Access:
 ${
   hasCalendarTools
-    ? `CALENDAR TOOLS AVAILABLE:
-You have access to the user's Google Calendar through these tools:
-- getTodayEvents: Get today's schedule
-- getUpcomingEvents: Get upcoming events (specify days parameter)
-- searchCalendarEvents: Search for specific events by keyword
-- getEventsInRange: Get events in a date range
-
-Use these tools AUTOMATICALLY when users ask about their schedule, meetings, or calendar. Don't ask for permission - just use them to provide accurate, personalized wellness advice based on their actual schedule.
-
-After getting calendar data, help them find wellness opportunities like breaks between meetings, suggest meditation times, or recommend stress-relief activities around their busy schedule.`
-    : `CALENDAR NOT CONNECTED:
-When users ask calendar-related questions, include [CALENDAR_BUTTON] in your response to show a connect calendar button. Gracefully guide users to connect their calendar for personalized wellness planning.`
+    ? "You can access the user's Google Calendar via: getTodayEvents, getUpcomingEvents (days), searchCalendarEvents (keyword), getEventsInRange (date range), Use these automatically when users mention meetings or schedules. After checking events, suggest wellness breaks, meditation slots, or stress-relief moments."
+    : "If the user asks about their calendar, include [CALENDAR_BUTTON] to connect their calendar for personalized planning."
 }
 
-Remember: You're here to support their wellness journey, not to replace professional medical advice.${memoryContext}`,
-    // Only include tools if user has calendar access
-    ...(hasCalendarTools && {
-      tools: calendarTools,
-    }),
+Reminder:
+SIA supports wellness, not professional medical advice.
+
+Memory Context about the user:${memoryContext}
+
+IMPORTANT: When users share personal information, preferences, goals, or important facts about themselves,
+use the saveMemory tool to store this information for future conversations. This helps create a personalized experience.
+
+Your User ID for saving memories: ${userId}`,
+    // Include calendar tools if user has access, always include memory tools
+    tools: hasCalendarTools
+      ? { ...calendarTools, ...memoryTools }
+      : memoryTools,
     stopWhen: stepCountIs(7),
     experimental_transform: smoothStream({
       delayInMs: 30,
@@ -185,24 +184,8 @@ Remember: You're here to support their wellness journey, not to replace professi
     },
   });
 
-  // Return UIMessage stream response IMMEDIATELY for streaming
-  // Save to Mem0 asynchronously without blocking the stream
-  if (userId && messages.length > 0) {
-    // Fire and forget - don't await this
-    const conversationForMemory = messages
-      .slice(-5)
-      .filter((msg) => msg.role === "user" || msg.role === "assistant")
-      .map((msg) => ({
-        role: msg.role as "user" | "assistant",
-        content: getMessageText(msg),
-      }));
-
-    addIntelligentMemories(userId, conversationForMemory).catch((error) => {
-      console.error("Error saving intelligent memories:", error);
-    });
-  }
-
   // Return UIMessage stream response with session ID and custom ID generator
+  // Note: Memories are now saved via the saveMemory tool which the AI can call when needed
   return result.toUIMessageStreamResponse({
     generateMessageId: createIdGenerator({
       prefix: "msg",

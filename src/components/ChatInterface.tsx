@@ -276,10 +276,13 @@ export default function ChatInterface({
                           );
                         }
 
-                        // Render calendar tool invocations inside Message UI
+                        // Render tool invocations inside Message UI
                         if (isToolPart) {
                           const toolName = part.type.replace("tool-", "");
                           const toolPart = part as any;
+
+                          // Check if this is a memory tool
+                          const isMemoryTool = toolName === "saveMemory" || toolName === "saveConversationMemories";
 
                           return (
                             <Message
@@ -288,15 +291,19 @@ export default function ChatInterface({
                             >
                               <MessageContentWrapper variant="flat">
                                 <div className="flex w-full p-3 sm:p-4 rounded-lg border border-border bg-muted">
+                                  {/* Input Streaming State */}
                                   {toolPart.state === "input-streaming" && (
                                     <div className="flex items-center gap-2 text-muted-foreground text-sm">
                                       <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
                                       <span>
-                                        Preparing to access calendar...
+                                        {isMemoryTool
+                                          ? "Preparing to save memory..."
+                                          : "Preparing to access calendar..."}
                                       </span>
                                     </div>
                                   )}
 
+                                  {/* Input Available State */}
                                   {toolPart.state === "input-available" && (
                                     <div className="flex items-center gap-2 text-muted-foreground text-sm">
                                       <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
@@ -309,10 +316,15 @@ export default function ChatInterface({
                                           `Searching calendar for "${toolPart.input?.query}"...`}
                                         {toolName === "getEventsInRange" &&
                                           "Fetching events in date range..."}
+                                        {toolName === "saveMemory" &&
+                                          "Saving important information..."}
+                                        {toolName === "saveConversationMemories" &&
+                                          "Extracting conversation memories..."}
                                       </span>
                                     </div>
                                   )}
 
+                                  {/* Output Available State */}
                                   {toolPart.state === "output-available" && (
                                     <div className="space-y-2">
                                       <div className="flex items-center gap-2 text-primary text-sm font-medium">
@@ -329,7 +341,11 @@ export default function ChatInterface({
                                             d="M5 13l4 4L19 7"
                                           />
                                         </svg>
-                                        <span>Calendar data retrieved</span>
+                                        <span>
+                                          {isMemoryTool
+                                            ? "Memory saved"
+                                            : "Calendar data retrieved"}
+                                        </span>
                                       </div>
                                       {toolPart.output?.events?.length > 0 && (
                                         <div className="text-xs text-muted-foreground">
@@ -343,6 +359,7 @@ export default function ChatInterface({
                                     </div>
                                   )}
 
+                                  {/* Output Error State */}
                                   {toolPart.state === "output-error" && (
                                     <div className="flex items-center gap-2 text-destructive text-sm">
                                       <svg
@@ -358,7 +375,11 @@ export default function ChatInterface({
                                           d="M6 18L18 6M6 6l12 12"
                                         />
                                       </svg>
-                                      <span>Failed to access calendar</span>
+                                      <span>
+                                        {isMemoryTool
+                                          ? "Failed to save memory"
+                                          : "Failed to access calendar"}
+                                      </span>
                                     </div>
                                   )}
                                 </div>
