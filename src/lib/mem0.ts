@@ -28,36 +28,24 @@ export async function searchUserMemories(userId: string, query: string) {
   }
 }
 
-// Helper function to add memories for a specific user
-export async function addUserMemories(
-  userId: string,
-  messages: Array<{ role: "user" | "assistant"; content: string }>
-) {
-  try {
-    const result = await mem0Client.add(messages, { user_id: userId });
-    return result;
-  } catch (error) {
-    console.error("Error adding memories:", error);
-    throw error;
-  }
-}
-
 // Helper function to add memories with intelligent extraction (default behavior)
 export async function addIntelligentMemories(
   userId: string,
   messages: Array<{ role: "user" | "assistant"; content: string }>
 ) {
   try {
-    // Mem0 will automatically extract relevant facts, preferences, and important information
-    // from the conversation and store only the meaningful parts
+    console.log("Adding memories for user:", userId);
+    console.log("Messages to store:", JSON.stringify(messages, null, 2));
+
     const result = await mem0Client.add(messages, {
       user_id: userId,
-      // Let Mem0's AI decide what's worth remembering
-      // This will extract ~8-10 relevant memories from 25 messages
     });
+
+    console.log("Mem0 add result:", JSON.stringify(result, null, 2));
     return result;
   } catch (error) {
     console.error("Error adding intelligent memories:", error);
+    console.error("Error details:", error);
     throw error;
   }
 }

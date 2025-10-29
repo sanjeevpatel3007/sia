@@ -38,19 +38,24 @@ Do NOT save:
     }),
     execute: async ({ userId, memoryContent, context }) => {
       try {
+        console.log("saveMemory tool called with:", { userId, memoryContent, context });
+
         // Create a conversation format for Mem0
+        // Format as a more natural conversation that Mem0 can extract from
         const messages = [
           {
             role: "user" as const,
-            content: context || "User shared information",
+            content: context || `I want to share some information: ${memoryContent}`,
           },
           {
             role: "assistant" as const,
-            content: memoryContent,
+            content: `I understand. Let me note that: ${memoryContent}`,
           },
         ];
 
-        await addIntelligentMemories(userId, messages);
+        console.log("Calling addIntelligentMemories with messages:", messages);
+        const result = await addIntelligentMemories(userId, messages);
+        console.log("addIntelligentMemories result:", result);
 
         return {
           success: true,
@@ -58,6 +63,7 @@ Do NOT save:
             0,
             50
           )}${memoryContent.length > 50 ? "..." : ""}"`,
+          result,
         };
       } catch (error) {
         console.error("Error saving memory:", error);
