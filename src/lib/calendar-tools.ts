@@ -25,10 +25,18 @@ export const getTodayEventsTool = {
       const formattedEvents = events.map(event => ({
         summary: event.summary,
         startTime: event.start.dateTime
-          ? new Date(event.start.dateTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+          ? new Date(event.start.dateTime).toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit',
+              timeZone: 'Asia/Kolkata'
+            })
           : 'All day',
         endTime: event.end.dateTime
-          ? new Date(event.end.dateTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+          ? new Date(event.end.dateTime).toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit',
+              timeZone: 'Asia/Kolkata'
+            })
           : 'All day',
         location: event.location || 'No location specified',
         description: event.description || ''
@@ -74,13 +82,26 @@ export const getUpcomingEventsTool = {
       const formattedEvents = events.slice(0, 10).map(event => ({
         summary: event.summary,
         date: event.start.dateTime
-          ? new Date(event.start.dateTime).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+          ? new Date(event.start.dateTime).toLocaleDateString('en-US', {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric',
+              timeZone: 'Asia/Kolkata'
+            })
           : event.start.date || 'Unknown date',
         startTime: event.start.dateTime
-          ? new Date(event.start.dateTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+          ? new Date(event.start.dateTime).toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit',
+              timeZone: 'Asia/Kolkata'
+            })
           : 'All day',
         endTime: event.end.dateTime
-          ? new Date(event.end.dateTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+          ? new Date(event.end.dateTime).toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit',
+              timeZone: 'Asia/Kolkata'
+            })
           : 'All day',
         location: event.location || 'No location specified'
       }));
@@ -123,10 +144,19 @@ export const searchCalendarEventsTool = {
       const formattedEvents = events.map(event => ({
         summary: event.summary,
         date: event.start.dateTime
-          ? new Date(event.start.dateTime).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+          ? new Date(event.start.dateTime).toLocaleDateString('en-US', {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric',
+              timeZone: 'Asia/Kolkata'
+            })
           : event.start.date || 'Unknown date',
         startTime: event.start.dateTime
-          ? new Date(event.start.dateTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+          ? new Date(event.start.dateTime).toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit',
+              timeZone: 'Asia/Kolkata'
+            })
           : 'All day',
         location: event.location || 'No location specified',
         attendees: event.attendees?.length || 0
@@ -171,13 +201,26 @@ export const getEventsInRangeTool = {
       const formattedEvents = events.map(event => ({
         summary: event.summary,
         date: event.start.dateTime
-          ? new Date(event.start.dateTime).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+          ? new Date(event.start.dateTime).toLocaleDateString('en-US', {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric',
+              timeZone: 'Asia/Kolkata'
+            })
           : event.start.date || 'Unknown date',
         startTime: event.start.dateTime
-          ? new Date(event.start.dateTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+          ? new Date(event.start.dateTime).toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit',
+              timeZone: 'Asia/Kolkata'
+            })
           : 'All day',
         endTime: event.end.dateTime
-          ? new Date(event.end.dateTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+          ? new Date(event.end.dateTime).toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit',
+              timeZone: 'Asia/Kolkata'
+            })
           : 'All day',
         location: event.location || 'No location specified'
       }));
