@@ -15,17 +15,13 @@ export default function QuickPrompts({ hasCalendarPermission, onPromptClick }: Q
     "Help me plan a mindful day",
     "Suggest a wellness break",
     "What are some stress relief techniques?",
-    "Help me with meditation guidance",
-    "How can I improve my sleep?",
 
     // Calendar prompts (only show if calendar is connected)
     ...(hasCalendarPermission ? [
-      "What's my schedule like today?",
-      "What meetings do I have today?",
-      "How busy is my schedule this week?",
-      "Suggest breaks between my meetings",
-      "Help me plan around my calendar",
-      "What's coming up this week?"
+      "Check my next class",
+      "What's on my schedule today?",
+      "When is my next meeting?",
+      "Suggest breaks between my events",
     ] : [])
   ];
 

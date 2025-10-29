@@ -3,7 +3,7 @@ import type { UIMessage } from 'ai';
 
 export interface ChatMessage {
   id?: string;
-  user_id: string;
+  user_id2: string;
   session_id: string;
   role: 'user' | 'assistant' | 'system' | 'tool';
   content?: string; // Kept for backward compatibility, prefer parts
@@ -36,7 +36,7 @@ export function convertUIMessageToDbMessage(
     .join(' ');
 
   return {
-    user_id: userId,
+    user_id2: userId,
     session_id: sessionId,
     role: uiMessage.role as 'user' | 'assistant' | 'system' | 'tool',
     content, // Keep for backward compatibility
@@ -46,7 +46,7 @@ export function convertUIMessageToDbMessage(
 
 export interface ChatSession {
   id: string;
-  user_id: string;
+  user_id2: string;
   title?: string;
   created_at?: string;
   updated_at?: string;
@@ -97,7 +97,7 @@ export async function getChatHistory(userId: string, sessionId?: string, limit: 
     let query = supabase
       .from('chat_messages')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id2', userId)
       .order('created_at', { ascending: true });
 
     if (sessionId) {
@@ -124,7 +124,7 @@ export async function getUserSessions(userId: string, limit: number = 10) {
     const { data, error } = await supabase
       .from('chat_sessions')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id2', userId)
       .order('updated_at', { ascending: false })
       .limit(limit);
 

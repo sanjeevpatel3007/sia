@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { usePersona } from "@/contexts/PersonaContext";
 import { Card, CardContent } from "@/components/ui/card";
-import { User, Briefcase, Heart } from "lucide-react";
+import Image from "next/image";
 
 const personaData = [
   {
@@ -12,10 +12,8 @@ const personaData = [
     role: "Freelance Designer",
     description:
       "Pregnant woman balancing freelance work, wellness, and preparing for motherhood",
-    icon: Heart,
+    image: "/images/sheela.png",
     gradient: "from-pink-500/20 to-purple-500/20",
-    iconColor: "text-pink-600",
-    activities: ["Prenatal Yoga", "Meditation", "Client Calls", "Family Time"],
   },
   {
     id: "ritvik",
@@ -23,10 +21,8 @@ const personaData = [
     role: "DevOps Engineer",
     description:
       "Tech professional balancing DevOps work, skill development, and personal wellness",
-    icon: User,
+    image: "/images/ritvik.png",
     gradient: "from-blue-500/20 to-cyan-500/20",
-    iconColor: "text-blue-600",
-    activities: ["Code Review", "AI Course", "Workout", "Gaming"],
   },
   {
     id: "gourav",
@@ -34,15 +30,8 @@ const personaData = [
     role: "Startup Founder",
     description:
       "Entrepreneur managing startup growth, investor relations, and work-life balance",
-    icon: Briefcase,
+    image: "/images/gourav.png",
     gradient: "from-orange-500/20 to-amber-500/20",
-    iconColor: "text-orange-600",
-    activities: [
-      "Investor Meetings",
-      "Design Review",
-      "Meditation",
-      "Family Dinner",
-    ],
   },
 ];
 
@@ -69,22 +58,25 @@ export default function PersonaCards() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
         {personaData.map((persona) => {
-          const Icon = persona.icon;
           return (
             <Card
               key={persona.id}
               className="group transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 border-2 hover:border-primary/50 overflow-hidden"
             >
               <CardContent className="relative p-6 space-y-4">
-                {/* Icon */}
-                <div
-                  className={`w-16 h-16 rounded-full bg-white shadow-lg flex items-center justify-center ${persona.iconColor} mb-4`}
-                >
-                  <Icon className="w-8 h-8" />
+                {/* Persona Image */}
+                <div className="w-24 h-24 rounded-full overflow-hidden mx-auto mb-4 ring-4 ring-white shadow-lg">
+                  <Image
+                    src={persona.image}
+                    alt={persona.name}
+                    width={96}
+                    height={96}
+                    className="object-cover w-full h-full"
+                  />
                 </div>
 
                 {/* Name & Role */}
-                <div>
+                <div className="text-center">
                   <h3 className="text-2xl font-bold text-secondary mb-1">
                     {persona.name}
                   </h3>
@@ -94,31 +86,14 @@ export default function PersonaCards() {
                 </div>
 
                 {/* Description */}
-                <p className="text-sm text-secondary/70 leading-relaxed min-h-[60px]">
+                <p className="text-sm text-secondary/70 leading-relaxed text-center min-h-[60px]">
                   {persona.description}
                 </p>
-
-                {/* Activities */}
-                <div className="pt-4 border-t border-border">
-                  <p className="text-xs font-semibold text-secondary/60 mb-2">
-                    TYPICAL ACTIVITIES
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {persona.activities.map((activity, idx) => (
-                      <span
-                        key={idx}
-                        className="text-xs px-2 py-1 bg-muted rounded-full text-secondary/80"
-                      >
-                        {activity}
-                      </span>
-                    ))}
-                  </div>
-                </div>
 
                 {/* CTA Button */}
                 <button
                   onClick={() => handlePersonaSelect(persona.id)}
-                  className="w-full mt-4 px-4 py-3 bg-secondary text-white rounded-lg font-medium transition-all duration-300 group-hover:bg-primary group-hover:shadow-lg"
+                  className="w-full mt-4 px-4 py-3 bg-secondary text-white rounded-lg font-medium transition-all duration-300 group-hover:bg-primary group-hover:shadow-lg cursor-pointer"
                 >
                   Start as {persona.name}
                 </button>
