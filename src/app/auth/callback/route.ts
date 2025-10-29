@@ -9,6 +9,6 @@ export async function GET(request: NextRequest) {
     await supabase.auth.exchangeCodeForSession(code)
   }
 
-  // Redirect to home page after successful authentication
-  return NextResponse.redirect(`${requestUrl.origin}/`)
+  // Redirect to chat page after successful authentication
+  return NextResponse.redirect(`${requestUrl.origin}/chat`)
 }

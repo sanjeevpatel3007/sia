@@ -1,71 +1,80 @@
-'use client'
-import React from 'react'
-import { useAuth } from '@/contexts/AuthContext'
-import { useEffect, useState, useRef } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { X } from 'lucide-react'
+"use client";
+import React from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEffect, useState, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { X } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
-  const { user, signInWithGoogle, signOut } = useAuth()
-  const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null)
-  const hasProcessedUrl = useRef(false)
+  const { user, signInWithGoogle, signOut } = useAuth();
+  const [notification, setNotification] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+  const hasProcessedUrl = useRef(false);
+  const router = useRouter();
 
   useEffect(() => {
-    if (hasProcessedUrl.current) return
-    
-    // Check for URL parameters to show notifications
-    const urlParams = new URLSearchParams(window.location.search)
-    const calendarPermission = urlParams.get('calendar_permission')
-    const error = urlParams.get('error')
+    if (hasProcessedUrl.current) return;
 
-    if (calendarPermission === 'success') {
+    // Check for URL parameters to show notifications
+    const urlParams = new URLSearchParams(window.location.search);
+    const calendarPermission = urlParams.get("calendar_permission");
+    const error = urlParams.get("error");
+
+    if (calendarPermission === "success") {
       // Use setTimeout to defer state update
       setTimeout(() => {
         setNotification({
-          type: 'success',
-          message: 'Calendar permission granted successfully! You can now access your Google Calendar through SIA.'
-        })
-      }, 0)
+          type: "success",
+          message:
+            "Calendar permission granted successfully! You can now access your Google Calendar through SIA.",
+        });
+      }, 0);
       // Clean up URL
-      window.history.replaceState({}, document.title, window.location.pathname)
-      hasProcessedUrl.current = true
-    } else if (error === 'calendar_permission_failed') {
+      window.history.replaceState({}, document.title, window.location.pathname);
+      hasProcessedUrl.current = true;
+    } else if (error === "calendar_permission_failed") {
       // Use setTimeout to defer state update
       setTimeout(() => {
         setNotification({
-          type: 'error',
-          message: 'Failed to grant calendar permission. Please try again.'
-        })
-      }, 0)
+          type: "error",
+          message: "Failed to grant calendar permission. Please try again.",
+        });
+      }, 0);
       // Clean up URL
-      window.history.replaceState({}, document.title, window.location.pathname)
-      hasProcessedUrl.current = true
+      window.history.replaceState({}, document.title, window.location.pathname);
+      hasProcessedUrl.current = true;
     }
-  }, [])
+  }, []);
 
   const handleTalkWithSIA = () => {
     if (user) {
-      // User is authenticated, redirect to chat
-      window.location.href = '/chat'
+      router.push("/chat");
     } else {
       // User not authenticated, trigger Google OAuth redirect
-      signInWithGoogle()
+      signInWithGoogle();
     }
-  }
+  };
 
   return (
     <div className="w-full min-h-screen relative bg-[#F7F5F3] overflow-x-hidden flex flex-col justify-start items-center">
       {/* Notification */}
       {notification && (
-        <Card className={`fixed top-4 right-4 z-50 max-w-md ${
-          notification.type === 'success'
-            ? 'border-primary bg-primary/10'
-            : 'border-destructive bg-destructive/10'
-        }`}>
+        <Card
+          className={`fixed top-4 right-4 z-50 max-w-md ${
+            notification.type === "success"
+              ? "border-primary bg-primary/10"
+              : "border-destructive bg-destructive/10"
+          }`}
+        >
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">{notification.message}</span>
+              <span className="text-sm font-medium">
+                {notification.message}
+              </span>
               <Button
                 variant="ghost"
                 size="icon-sm"
@@ -100,7 +109,6 @@ export default function Home() {
                     </div>
                   </div>
                   <div className="pl-3 sm:pl-4 md:pl-5 lg:pl-5 hidden sm:flex flex-row gap-2 sm:gap-3 md:gap-4 lg:gap-4">
-                   
                     <div className="flex justify-start items-center cursor-pointer pointer-events-none">
                       <div className="flex flex-col justify-center text-secondary/80 text-xs md:text-[13px] font-medium leading-[14px] font-sans">
                         SAMA
@@ -116,11 +124,15 @@ export default function Home() {
                 <div className="h-6 sm:h-7 md:h-8 flex justify-start items-start gap-2 sm:gap-3 relative z-50 pointer-events-auto">
                   <button
                     onClick={() => (user ? signOut() : signInWithGoogle())}
-                    className={`px-2 sm:px-3 md:px-[14px] py-1 sm:py-[6px] overflow-hidden rounded-full flex justify-center items-center cursor-pointer shadow-[0px_1px_2px_rgba(55,50,47,0.12)] transition-colors relative z-[140] pointer-events-auto ${user ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : 'bg-white text-secondary hover:bg-white/90'}`}
-                    aria-label={user ? 'Log out' : 'Log in'}
+                    className={`px-2 sm:px-3 md:px-[14px] py-1 sm:py-[6px] overflow-hidden rounded-full flex justify-center items-center cursor-pointer shadow-[0px_1px_2px_rgba(55,50,47,0.12)] transition-colors relative z-[140] pointer-events-auto ${
+                      user
+                        ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        : "bg-white text-secondary hover:bg-white/90"
+                    }`}
+                    aria-label={user ? "Log out" : "Log in"}
                   >
                     <span className="flex flex-col justify-center text-xs md:text-[13px] font-medium leading-5 font-sans">
-                      {user ? 'Log out' : 'Log in'}
+                      {user ? "Log out" : "Log in"}
                     </span>
                   </button>
                 </div>
@@ -137,9 +149,11 @@ export default function Home() {
                     For Life.
                   </div>
                   <div className="w-full max-w-[506.08px] lg:w-[506.08px] text-center flex justify-center flex-col text-secondary/80 sm:text-lg md:text-xl leading-[1.4] sm:leading-[1.45] md:leading-normal lg:leading-7 font-sans px-2 sm:px-4 md:px-0 lg:text-lg font-medium text-sm">
-                    A mindful wellness approach built for modern lives and better healthspan.
+                    A mindful wellness approach built for modern lives and
+                    better healthspan.
                     <br className="hidden sm:block" />
-                    Welcome to SAMA - where balance, tranquility, and strength come together.
+                    Welcome to SAMA - where balance, tranquility, and strength
+                    come together.
                   </div>
                 </div>
               </div>
@@ -162,9 +176,12 @@ export default function Home() {
               {/* SAMA Philosophy Section */}
               <div className="w-full max-w-[600px] mt-12 sm:mt-16 md:mt-20 lg:mt-24">
                 <div className="bg-accent/20 backdrop-blur-sm rounded-2xl p-6 sm:p-8 border border-accent/30">
-                  <h3 className="text-2xl sm:text-3xl font-bold mb-4 text-accent-foreground text-center">What is SAMA?</h3>
+                  <h3 className="text-2xl sm:text-3xl font-bold mb-4 text-accent-foreground text-center">
+                    What is SAMA?
+                  </h3>
                   <p className="text-base sm:text-lg text-accent-foreground/90 mb-4 text-center">
-                    SAMA (सम) is a state of calmness and tranquility of the mind, a perfect state of balance.
+                    SAMA (सम) is a state of calmness and tranquility of the
+                    mind, a perfect state of balance.
                   </p>
                   <p className="text-base sm:text-lg text-accent-foreground/90 mb-4 text-center">
                     We are patient and gentle by design.
