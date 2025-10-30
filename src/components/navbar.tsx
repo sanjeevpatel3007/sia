@@ -82,25 +82,7 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {/* Navigation Links */}
-          <div className="hidden md:block">
-            <div className="ml-10 flex items-baseline space-x-6">
-              <Link
-                href="/"
-                className="text-secondary/90 hover:text-secondary px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 hover:bg-accent"
-              >
-                Home
-              </Link>
-              {currentPersona && (
-                <Link
-                  href="/chat"
-                  className="text-secondary/90 hover:text-secondary px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 hover:bg-accent"
-                >
-                  Chat with SIA
-                </Link>
-              )}
-            </div>
-          </div>
+          
 
           {/* Persona Dropdown */}
           <div className="relative" ref={dropdownRef}>

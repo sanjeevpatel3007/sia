@@ -198,86 +198,116 @@ export default function ChatInterface({
                   )}
 
                   {messages.length > 0 &&
-                    messages.map((msg: any, idx: number) => (
-                      <div key={msg.id || idx} className="space-y-0">
-                        {msg.parts.map((part: any, partIdx: number) => {
-                          const isToolPart =
-                            typeof part.type === "string" &&
-                            part.type.startsWith("tool-") &&
-                            "state" in part;
+                    messages.map((msg: any, idx: number) => {
+                      // Group consecutive memory tool parts
+                      const groupedParts: any[] = [];
+                      let currentMemoryGroup: any[] = [];
 
-                          // Render text parts inside Message UI
-                          if (part.type === "text") {
-                            return (
-                              <Message
-                                key={`${msg.id || idx}-${partIdx}`}
-                                from={msg.role}
-                              >
-                                <MessageContentWrapper variant="contained">
-                                  <MessageContent
-                                    content={part.text}
-                                  />
-                                </MessageContentWrapper>
-                              </Message>
-                            );
+                      msg.parts.forEach((part: any, partIdx: number) => {
+                        const isToolPart =
+                          typeof part.type === "string" &&
+                          part.type.startsWith("tool-") &&
+                          "state" in part;
+
+                        if (isToolPart) {
+                          const toolName = part.type.replace("tool-", "");
+                          const isMemoryTool =
+                            toolName === "saveMemory" ||
+                            toolName === "saveConversationMemories";
+
+                          if (isMemoryTool) {
+                            currentMemoryGroup.push(part);
+                          } else {
+                            // If we have accumulated memory tools, add them as a group
+                            if (currentMemoryGroup.length > 0) {
+                              groupedParts.push({
+                                type: "memory-group",
+                                parts: currentMemoryGroup,
+                              });
+                              currentMemoryGroup = [];
+                            }
+                            groupedParts.push(part);
                           }
+                        } else {
+                          // If we have accumulated memory tools, add them as a group
+                          if (currentMemoryGroup.length > 0) {
+                            groupedParts.push({
+                              type: "memory-group",
+                              parts: currentMemoryGroup,
+                            });
+                            currentMemoryGroup = [];
+                          }
+                          groupedParts.push(part);
+                        }
+                      });
 
-                          // Render tool invocations inside Message UI
-                          if (isToolPart) {
-                            const toolName = part.type.replace("tool-", "");
-                            const toolPart = part as any;
+                      // Add any remaining memory group
+                      if (currentMemoryGroup.length > 0) {
+                        groupedParts.push({
+                          type: "memory-group",
+                          parts: currentMemoryGroup,
+                        });
+                      }
 
-                            // Check if this is a memory tool
-                            const isMemoryTool =
-                              toolName === "saveMemory" ||
-                              toolName === "saveConversationMemories";
+                      return (
+                        <div key={msg.id || idx} className="space-y-0">
+                          {groupedParts.map((part: any, partIdx: number) => {
+                            // Handle memory group
+                            if (part.type === "memory-group") {
+                              const memoryParts = part.parts;
+                              // Show the state of the last memory operation
+                              const lastMemoryPart =
+                                memoryParts[memoryParts.length - 1];
+                              const state = lastMemoryPart.state;
 
-                            return (
-                              <Message
-                                key={`${msg.id || idx}-${partIdx}`}
-                                from={msg.role}
-                              >
-                                <MessageContentWrapper variant="flat">
-                                  <div className="flex w-full p-3 sm:p-4 rounded-lg border border-border bg-muted">
-                                    {/* Input Streaming State */}
-                                    {toolPart.state === "input-streaming" && (
-                                      <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                                        <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
-                                        <span>
-                                          {isMemoryTool
-                                            ? "Preparing to save memory..."
-                                            : "Preparing to access calendar..."}
-                                        </span>
-                                      </div>
-                                    )}
+                              return (
+                                <Message
+                                  key={`${msg.id || idx}-memory-${partIdx}`}
+                                  from={msg.role}
+                                >
+                                  <MessageContentWrapper variant="flat">
+                                    <div className="flex w-full p-3 sm:p-4 rounded-lg border border-border bg-muted">
+                                      {/* Input Streaming State */}
+                                      {state === "input-streaming" && (
+                                        <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                                          <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
+                                          <span>Preparing to save memory...</span>
+                                        </div>
+                                      )}
 
-                                    {/* Input Available State */}
-                                    {toolPart.state === "input-available" && (
-                                      <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                                        <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
-                                        <span>
-                                          {toolName === "getTodayEvents" &&
-                                            "Fetching today's schedule..."}
-                                          {toolName === "getUpcomingEvents" &&
-                                            "Fetching upcoming events..."}
-                                          {toolName ===
-                                            "searchCalendarEvents" &&
-                                            `Searching calendar for "${toolPart.input?.query}"...`}
-                                          {toolName === "getEventsInRange" &&
-                                            "Fetching events in date range..."}
-                                          {toolName === "saveMemory" &&
-                                            "Saving memory..."}
-                                          {toolName ===
-                                            "saveConversationMemories" &&
-                                            "Extracting conversation memories..."}
-                                        </span>
-                                      </div>
-                                    )}
+                                      {/* Input Available State */}
+                                      {state === "input-available" && (
+                                        <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                                          <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
+                                          <span>Saving memory...</span>
+                                        </div>
+                                      )}
 
-                                    {/* Output Available State */}
-                                    {toolPart.state === "output-available" && (
-                                      <div className="space-y-2">
-                                        <div className="flex items-center gap-2 text-primary text-sm font-medium">
+                                      {/* Output Available State */}
+                                      {state === "output-available" && (
+                                        <div className="space-y-2">
+                                          <div className="flex items-center gap-2 text-primary text-sm font-medium">
+                                            <svg
+                                              className="w-4 h-4"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              viewBox="0 0 24 24"
+                                            >
+                                              <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M5 13l4 4L19 7"
+                                              />
+                                            </svg>
+                                            <span>Memory saved</span>
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* Output Error State */}
+                                      {state === "output-error" && (
+                                        <div className="flex items-center gap-2 text-destructive text-sm">
                                           <svg
                                             className="w-4 h-4"
                                             fill="none"
@@ -288,62 +318,140 @@ export default function ChatInterface({
                                               strokeLinecap="round"
                                               strokeLinejoin="round"
                                               strokeWidth={2}
-                                              d="M5 13l4 4L19 7"
+                                              d="M6 18L18 6M6 6l12 12"
                                             />
                                           </svg>
+                                          <span>Failed to save memory</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </MessageContentWrapper>
+                                </Message>
+                              );
+                            }
+
+                            const isToolPart =
+                              typeof part.type === "string" &&
+                              part.type.startsWith("tool-") &&
+                              "state" in part;
+
+                            // Render text parts inside Message UI
+                            if (part.type === "text") {
+                              return (
+                                <Message
+                                  key={`${msg.id || idx}-${partIdx}`}
+                                  from={msg.role}
+                                >
+                                  <MessageContentWrapper variant="contained">
+                                    <MessageContent content={part.text} />
+                                  </MessageContentWrapper>
+                                </Message>
+                              );
+                            }
+
+                            // Render non-memory tool invocations
+                            if (isToolPart) {
+                              const toolName = part.type.replace("tool-", "");
+                              const toolPart = part as any;
+
+                              return (
+                                <Message
+                                  key={`${msg.id || idx}-${partIdx}`}
+                                  from={msg.role}
+                                >
+                                  <MessageContentWrapper variant="flat">
+                                    <div className="flex w-full p-3 sm:p-4 rounded-lg border border-border bg-muted">
+                                      {/* Input Streaming State */}
+                                      {toolPart.state === "input-streaming" && (
+                                        <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                                          <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
                                           <span>
-                                            {isMemoryTool
-                                              ? "Memory saved"
-                                              : "Calendar data retrieved"}
+                                            Preparing to access calendar...
                                           </span>
                                         </div>
-                                        {toolPart.output?.events?.length >
-                                          0 && (
-                                          <div className="text-xs text-muted-foreground">
-                                            Found{" "}
-                                            {toolPart.output.events.length}{" "}
-                                            event
-                                            {toolPart.output.events.length > 1
-                                              ? "s"
-                                              : ""}
+                                      )}
+
+                                      {/* Input Available State */}
+                                      {toolPart.state === "input-available" && (
+                                        <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                                          <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
+                                          <span>
+                                            {toolName === "getTodayEvents" &&
+                                              "Fetching today's schedule..."}
+                                            {toolName === "getUpcomingEvents" &&
+                                              "Fetching upcoming events..."}
+                                            {toolName ===
+                                              "searchCalendarEvents" &&
+                                              `Searching calendar for "${toolPart.input?.query}"...`}
+                                            {toolName === "getEventsInRange" &&
+                                              "Fetching events in date range..."}
+                                          </span>
+                                        </div>
+                                      )}
+
+                                      {/* Output Available State */}
+                                      {toolPart.state === "output-available" && (
+                                        <div className="space-y-2">
+                                          <div className="flex items-center gap-2 text-primary text-sm font-medium">
+                                            <svg
+                                              className="w-4 h-4"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              viewBox="0 0 24 24"
+                                            >
+                                              <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M5 13l4 4L19 7"
+                                              />
+                                            </svg>
+                                            <span>Calendar data retrieved</span>
                                           </div>
-                                        )}
-                                      </div>
-                                    )}
+                                          {toolPart.output?.events?.length >
+                                            0 && (
+                                            <div className="text-xs text-muted-foreground">
+                                              Found{" "}
+                                              {toolPart.output.events.length}{" "}
+                                              event
+                                              {toolPart.output.events.length > 1
+                                                ? "s"
+                                                : ""}
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
 
-                                    {/* Output Error State */}
-                                    {toolPart.state === "output-error" && (
-                                      <div className="flex items-center gap-2 text-destructive text-sm">
-                                        <svg
-                                          className="w-4 h-4"
-                                          fill="none"
-                                          stroke="currentColor"
-                                          viewBox="0 0 24 24"
-                                        >
-                                          <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M6 18L18 6M6 6l12 12"
-                                          />
-                                        </svg>
-                                        <span>
-                                          {isMemoryTool
-                                            ? "Failed to save memory"
-                                            : "Failed to access calendar"}
-                                        </span>
-                                      </div>
-                                    )}
-                                  </div>
-                                </MessageContentWrapper>
-                              </Message>
-                            );
-                          }
+                                      {/* Output Error State */}
+                                      {toolPart.state === "output-error" && (
+                                        <div className="flex items-center gap-2 text-destructive text-sm">
+                                          <svg
+                                            className="w-4 h-4"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                          >
+                                            <path
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                              strokeWidth={2}
+                                              d="M6 18L18 6M6 6l12 12"
+                                            />
+                                          </svg>
+                                          <span>Failed to access calendar</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </MessageContentWrapper>
+                                </Message>
+                              );
+                            }
 
-                          return null;
-                        })}
-                      </div>
-                    ))}
+                            return null;
+                          })}
+                        </div>
+                      );
+                    })}
 
                   {/* Show loading when submitted OR when streaming but last message has no content yet */}
                   {(status === "submitted" ||

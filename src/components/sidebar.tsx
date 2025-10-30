@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import {
   MessageCircle,
-  Settings,
+  Home,
   User,
   Plus,
   Trash2,
@@ -111,29 +111,26 @@ export default function Sidebar() {
       <aside className={`h-[calc(100vh-4rem)] bg-background border-r border-border flex flex-col transition-all duration-300
         ${open ? 'w-64' : '-translate-x-full w-64'} lg:w-64 lg:translate-x-0 fixed lg:relative top-16 lg:top-0 left-0 z-50 lg:z-auto`}>
 
-      {/* Branding */}
-      <div className={`px-3 pt-4 mb-6 ${open ? "" : "hidden"}`}>
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center">
-            <div className="w-4 h-4 rounded-full bg-muted"></div>
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-secondary">SIA</h2>
-            <p className="text-xs text-muted-foreground">Wellness Assistant</p>
-          </div>
+      {/* Top actions */}
+      <div className={`px-3 pt-4 mb-4 ${open ? "" : "hidden"}`}>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Home"
+            onClick={() => router.push('/')}
+          >
+            <Home size={18} />
+          </Button>
+          <Button
+            onClick={handleNewChat}
+            variant="secondary"
+            className="flex-1"
+          >
+            <Plus size={18} />
+            New Chat
+          </Button>
         </div>
-      </div>
-
-      {/* New Chat Button */}
-      <div className={`px-3 mb-4 ${open ? "" : "hidden"}`}>
-        <Button
-          onClick={handleNewChat}
-          variant="secondary"
-          className="w-full"
-        >
-          <Plus size={18} />
-          New Chat
-        </Button>
       </div>
 
       {/* Search Bar */}
