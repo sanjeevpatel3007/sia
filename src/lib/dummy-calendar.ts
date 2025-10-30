@@ -155,18 +155,16 @@ class DummyCalendarService {
 
   /**
    * Generate events for a specific date range based on the template
+   * ALWAYS returns Sama Studio schedule, regardless of selected persona
    */
   private generateEvents(startDate: Date, endDate: Date): DummyEvent[] {
     const events: DummyEvent[] = [];
     const currentDate = new Date(startDate);
 
-    // Determine which schedule to use
-    const persona = this.getCurrentPersona();
-    const schedule = persona ? persona.schedule : samaStudioSchedule;
-    const location = persona ? "Personal Schedule" : "Sama Studio";
-    const descriptionPrefix = persona
-      ? `${persona.name}'s activity`
-      : "Wellness activity at Sama Studio";
+    // ALWAYS use Sama Studio schedule for calendar queries
+    const schedule = samaStudioSchedule;
+    const location = "Sama Studio";
+    const descriptionPrefix = "Wellness activity at Sama Studio";
 
     while (currentDate <= endDate) {
       const dayOfMonth = currentDate.getDate();

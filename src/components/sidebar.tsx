@@ -172,7 +172,7 @@ export default function Sidebar() {
                 <li key={session.id} className="group relative">
                   <Button
                     variant="ghost"
-                    className={`w-full flex items-start gap-2 px-3 py-2 h-auto justify-start text-left
+                    className={`w-full flex items-start gap-2 px-3 py-2 pr-10 h-auto justify-start text-left
                       ${currentSessionId === session.id ? 'bg-accent font-semibold' : ''}`}
                     onClick={() => handleChatClick(session.id)}
                   >

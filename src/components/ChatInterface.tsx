@@ -31,7 +31,8 @@ export default function ChatInterface({
   chatId,
   initialMessages = [],
 }: ChatInterfaceProps) {
-  const { session } = useAuth();
+  const { session, hasCalendarPermission, requestCalendarPermission } =
+    useAuth();
   const { currentPersona } = usePersona();
   const {
     currentSessionId,
@@ -271,7 +272,9 @@ export default function ChatInterface({
                                       {state === "input-streaming" && (
                                         <div className="flex items-center gap-2 text-muted-foreground text-sm">
                                           <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
-                                          <span>Preparing to save memory...</span>
+                                          <span>
+                                            Preparing to save memory...
+                                          </span>
                                         </div>
                                       )}
 
@@ -390,7 +393,8 @@ export default function ChatInterface({
                                       )}
 
                                       {/* Output Available State */}
-                                      {toolPart.state === "output-available" && (
+                                      {toolPart.state ===
+                                        "output-available" && (
                                         <div className="space-y-2">
                                           <div className="flex items-center gap-2 text-primary text-sm font-medium">
                                             <svg
@@ -479,6 +483,8 @@ export default function ChatInterface({
             setInput={setInput}
             onSendMessage={sendMessage}
             isStreaming={status === "streaming"}
+            hasCalendarPermission={hasCalendarPermission}
+            onRequestCalendarPermission={requestCalendarPermission}
             messages={messages}
             handleQuickPrompt={(prompt: string) => setInput(prompt)}
           />

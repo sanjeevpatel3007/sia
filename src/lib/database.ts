@@ -170,7 +170,7 @@ export async function getUserSessionsWithCount(userId: string, limit: number = 2
         *,
         chat_messages(count)
       `)
-      .eq('user_id', userId)
+      .eq('user_id2', userId)
       .order('updated_at', { ascending: false })
       .limit(limit);
 
@@ -190,7 +190,7 @@ export async function createChatSession(userId: string, title?: string) {
       .from('chat_sessions')
       .insert([{
         id: sessionId,
-        user_id: userId,
+        user_id2: userId,
         title: title || 'New Chat'
       }])
       .select()
@@ -274,7 +274,7 @@ export async function getUserChatSessions(userId: string, limit: number = 20) {
     const { data: sessions, error: sessionsError } = await supabase
       .from('chat_sessions')
       .select('id, title, created_at, updated_at')
-      .eq('user_id', userId)
+      .eq('user_id2', userId)
       .order('updated_at', { ascending: false })
       .limit(limit);
 
@@ -356,7 +356,7 @@ export async function addMessageToSession(
       .from('chat_messages')
       .insert([{
         session_id: sessionId,
-        user_id: userId,
+        user_id2: userId,
         role,
         content, // Keep for backward compatibility
         parts: parts || [{ type: 'text', text: content }], // Save parts array

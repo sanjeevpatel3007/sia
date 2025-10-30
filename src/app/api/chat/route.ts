@@ -7,10 +7,7 @@ import {
   stepCountIs,
   smoothStream,
 } from "ai";
-import {
-  searchUserMemories,
-  formatMemoriesForContext,
-} from "@/lib/mem0";
+import { searchUserMemories, formatMemoriesForContext } from "@/lib/mem0";
 import { generateSessionId, saveUIMessage } from "@/lib/database";
 import { supabase } from "@/lib/supabase";
 import { dummyCalendarTools } from "@/lib/dummy-calendar-tools";
@@ -24,8 +21,12 @@ export async function POST(req: Request) {
     session,
     sessionId,
     personaId,
-  }: { messages: UIMessage[]; session: any; sessionId?: string; personaId?: string } =
-    await req.json();
+  }: {
+    messages: UIMessage[];
+    session: any;
+    sessionId?: string;
+    personaId?: string;
+  } = await req.json();
 
   let memoryContext = "";
   let userId: string | null = null;
@@ -80,16 +81,16 @@ export async function POST(req: Request) {
     You are SIA, a warm and empathetic AI wellness companion.
 Your purpose is to help users find calm, balance, and mindfulness in daily life.
 
-Current Date and Time: ${new Date().toLocaleString('en-IN', {
-  weekday: 'long',
-  year: 'numeric',
-  month: 'long',
-  day: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-  timeZone: 'Asia/Kolkata',
-  timeZoneName: 'short'
-})} (India Standard Time)
+Current Date and Time: ${new Date().toLocaleString("en-IN", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Asia/Kolkata",
+      timeZoneName: "short",
+    })} (India Standard Time)
 
 Guidelines:
 
@@ -181,7 +182,7 @@ Your User ID for saving memories: ${userId}`,
             await supabase.from("chat_sessions").insert([
               {
                 id: currentSessionId,
-                user_id: userId,
+                user_id2: userId,
                 title:
                   firstUserMessage.length > 50
                     ? firstUserMessage.substring(0, 50) + "..."

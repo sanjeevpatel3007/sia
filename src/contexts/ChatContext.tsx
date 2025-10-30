@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
+import { usePersona } from './PersonaContext';
 import {
   getUserSessions,
   getSessionMessages,
@@ -49,36 +50,39 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
   const { session } = useAuth();
+  const { currentPersona } = usePersona();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [currentMessages, setCurrentMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isMessagesLoading, setIsMessagesLoading] = useState(false);
 
+  const activeUserId = currentPersona?.id || session?.user?.id;
+
   const refreshSessions = useCallback(async () => {
-    if (!session?.user?.id) return;
+    if (!activeUserId) return;
     
     setIsLoading(true);
     try {
-      const userSessions = await getUserSessions(session.user.id);
+      const userSessions = await getUserSessions(activeUserId);
       setSessions(userSessions);
     } catch (error) {
       console.error('Error loading sessions:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [session?.user?.id]);
+  }, [activeUserId]);
 
   // Load sessions when user changes
   useEffect(() => {
-    if (session?.user?.id) {
+    if (activeUserId) {
       refreshSessions();
     } else {
       setSessions([]);
       setCurrentSessionId(null);
       setCurrentMessages([]);
     }
-  }, [session?.user?.id, refreshSessions]);
+  }, [activeUserId, refreshSessions]);
 
   // Load messages when session changes
   const loadSessionMessages = useCallback(async (sessionId: string) => {
@@ -106,7 +110,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   }, [currentSessionId, loadSessionMessages]);
 
   const createNewSession = async (): Promise<string> => {
-    if (!session?.user?.id) throw new Error('User not authenticated');
+    if (!activeUserId) throw new Error('No active user or persona');
     
     try {
       // Generate new session ID but don't create in database yet
