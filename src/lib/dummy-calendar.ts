@@ -170,9 +170,7 @@ class DummyCalendarService {
       const dayOfMonth = currentDate.getDate();
 
       // Find all activities for this day from the template
-      const dayActivities = schedule.filter(
-        (item) => item.day === dayOfMonth
-      );
+      const dayActivities = schedule.filter((item) => item.day === dayOfMonth);
 
       dayActivities.forEach((activity) => {
         const [startTime, endTime] = activity.timeSlot.split("-");
@@ -185,7 +183,7 @@ class DummyCalendarService {
         const eventEnd = new Date(currentDate);
         eventEnd.setHours(endHour, endMinute, 0, 0);
 
-        const eventName = "activity" in activity ? activity.activity : activity.event;
+        const eventName = activity.activity;
 
         events.push({
           summary: eventName,

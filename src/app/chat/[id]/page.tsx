@@ -1,5 +1,5 @@
-import ChatInterface from '@/components/ChatInterface';
-import { getSessionMessages } from '@/lib/database';
+import ChatInterface from "@/components/ChatInterface";
+import { getSessionMessages } from "@/actions/chat-history.actions";
 
 interface ChatPageProps {
   params: Promise<{
