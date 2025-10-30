@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { usePersona } from "@/contexts/PersonaContext";
 import { Card, CardContent } from "@/components/ui/card";
 import Image from "next/image";
+import { generateId } from "ai";
 
 const personaData = [
   {
@@ -41,7 +42,8 @@ export default function PersonaCards() {
 
   const handlePersonaSelect = (personaId: string) => {
     selectPersona(personaId);
-    router.push("/chat");
+    const newId = generateId();
+    router.push(`/chat/${newId}`);
   };
 
   return (

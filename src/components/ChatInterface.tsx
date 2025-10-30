@@ -388,6 +388,15 @@ export default function ChatInterface({
                                               `Searching calendar for "${toolPart.input?.query}"...`}
                                             {toolName === "getEventsInRange" &&
                                               "Fetching events in date range..."}
+                                            {toolName === "bookTimeSlot" &&
+                                              `Booking ${
+                                                toolPart.input?.className ||
+                                                "activity"
+                                              }${
+                                                toolPart.input?.timeSlot
+                                                  ? ` at ${toolPart.input.timeSlot}`
+                                                  : ""
+                                              }...`}
                                           </span>
                                         </div>
                                       )}
@@ -410,7 +419,11 @@ export default function ChatInterface({
                                                 d="M5 13l4 4L19 7"
                                               />
                                             </svg>
-                                            <span>Calendar data retrieved</span>
+                                            <span>
+                                              {toolName === "bookTimeSlot"
+                                                ? "Booking confirmed"
+                                                : "Calendar data retrieved"}
+                                            </span>
                                           </div>
                                           {toolPart.output?.events?.length >
                                             0 && (
@@ -423,6 +436,26 @@ export default function ChatInterface({
                                                 : ""}
                                             </div>
                                           )}
+                                          {toolName === "bookTimeSlot" &&
+                                            toolPart.output?.confirmation && (
+                                              <div className="text-xs text-muted-foreground">
+                                                Booked:{" "}
+                                                {
+                                                  toolPart.output.confirmation
+                                                    .className
+                                                }{" "}
+                                                on{" "}
+                                                {
+                                                  toolPart.output.confirmation
+                                                    .date
+                                                }{" "}
+                                                at{" "}
+                                                {
+                                                  toolPart.output.confirmation
+                                                    .timeSlot
+                                                }
+                                              </div>
+                                            )}
                                         </div>
                                       )}
 

@@ -12,6 +12,7 @@ import { generateSessionId, saveUIMessage } from "@/lib/database";
 import { supabase } from "@/lib/supabase";
 import { dummyCalendarTools } from "@/lib/dummy-calendar-tools";
 import { memoryTools } from "@/lib/memory-tools";
+import { dummyBookingTools } from "@/lib/dummy-booking-tools";
 
 export const maxDuration = 30;
 
@@ -110,7 +111,7 @@ Always use MEMORIES for personal details (name, education, habits, etc.).
 
 If the user asks about their info, check MEMORIES first and respond from there.
 
-Calendar Access:
+    Calendar Access:
 You can access the user's calendar via: getTodayEvents, getUpcomingEvents (days), searchCalendarEvents (keyword), getEventsInRange (date range). Use these automatically when users mention meetings or schedules. After checking events, suggest wellness breaks, meditation slots, or stress-relief moments.
 
 IMPORTANT: When referring to event dates, always compare them to the Current Date above to determine if they are "today", "tomorrow", or a specific future date. Be accurate with date references.
@@ -122,7 +123,7 @@ CRITICAL - BE PROACTIVE, NOT REACTIVE:
 - If they ask about a specific class type (yoga, pilates, etc.), search for that class type directly
 - Only ask clarifying questions if the query is truly ambiguous (e.g., "next class" when there are multiple types happening at the same time)
 
-Booking & Availability Management:
+    Booking & Availability Management:
 When a user wants to book a Sama Studio class:
 1. ALWAYS use checkAvailability tool FIRST to verify both:
    - The user/persona is free at that time (no conflicting personal events)
@@ -134,6 +135,7 @@ When a user wants to book a Sama Studio class:
 3. Only confirm a booking when both conditions are met:
    - Persona calendar is free
    - Sama Studio has the class scheduled
+4. When both conditions are met, CONFIRM by calling bookTimeSlot with date, timeSlot, and className. This returns a dummy success confirmation (no real booking is made).
 
 Example workflow:
 - User: "Book yoga class tomorrow at 8 AM"
@@ -156,8 +158,8 @@ These are RETRIEVAL questions - simply respond using the Memory Context provided
 ONLY save memories when users are SHARING NEW information about themselves (preferences, habits, goals, personal details).
 
 Your User ID for saving memories: ${userId}`,
-    // Include dummy calendar tools and memory tools
-    tools: { ...dummyCalendarTools, ...memoryTools },
+    // Include dummy calendar tools, booking tool and memory tools
+    tools: { ...dummyCalendarTools, ...memoryTools, ...dummyBookingTools },
     stopWhen: stepCountIs(7),
     experimental_transform: smoothStream({
       delayInMs: 30,
